@@ -1,0 +1,46 @@
+name: Generate Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**/*.test.ts'
+      - 'src/**/*.test.js'
+      - 'src/**/*.spec.ts'
+      - 'src/**/*.spec.js'
+      - 'src/markdown-docs.cjs'
+      - 'src/index.ts'
+      - 'src/action.ts'
+  workflow_dispatch:
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22.x'
+        cache: 'npm'
+    - run: npm ci
+    - name: Generate Documentation with GitHub Links
+      run: |
+        node src/markdown-docs.cjs \
+          --source ./src \
+          --output ./doc/tests \
+          --github-url ${{ github.server_url }}/${{ github.repository }} \
+          --github-branch ${{ github.ref_name }} \
+          --repository-root ./
+    - name: Commit and Push Documentation
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add doc/tests/
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Update test documentation [skip ci]"
+          git push
+        fi

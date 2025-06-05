@@ -1,0 +1,31 @@
+name: "Markdown Test Documentation Generator"
+description: "Generates markdown documentation for Jest / Vitest test files with GitHub integration"
+author: "Szymon Paluchowski"
+inputs:
+  source:
+    description: "Directory containing the Jest test files"
+    required: true
+    default: "./src"
+  output:
+    description: "Directory to output the generated markdown files"
+    required: false
+    default: "./doc-tests"
+  github-url:
+    description: "GitHub repository URL (e.g., 'https://github.com/username/repo')"
+    required: false
+    default: ""
+  github-branch:
+    description: "GitHub branch name"
+    required: false
+    default: "main"
+  repository-root:
+    description: "Repository root directory"
+    required: false
+    default: "./"
+  verbose:
+    description: "Enable verbose logging (shows unknown tags and additional info)"
+    required: false
+    default: "false"
+runs:
+  using: "node22"
+  main: "../../../dist/action.js"

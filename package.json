@@ -1,0 +1,47 @@
+{
+  "name": "markdown-test-docs-generator",
+  "version": "1.0.0",
+  "description": "Markdown documentation generator for Jest test files",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "bin": {
+    "markdown-docs": "src/markdown-docs.cjs"
+  },
+  "scripts": {
+    "start": "node src/markdown-docs.cjs --source ./src --output ./doc/tests",
+    "start:github": "node src/markdown-docs.cjs --source ./src --output ./doc/tests --github-url https://github.com/username/tsdoc-test-docs --github-branch main --repository-root ./",
+    "start:verbose": "node src/markdown-docs.cjs --source ./src --output ./doc/tests --verbose",
+    "start:github:verbose": "node src/markdown-docs.cjs --source ./src --output ./doc/tests --github-url https://github.com/username/tsdoc-test-docs --github-branch main --repository-root ./ --verbose",
+    "build": "node scripts/build-action.js",
+    "build:lib": "tsc",
+    "build:action": "tsc src/action.ts --outDir dist --target ES2019 --module CommonJS --esModuleInterop --declaration false",
+    "test": "jest",
+    "lint": "eslint . --ext .js,.ts,.cjs",
+    "lint:fix": "eslint . --ext .js,.ts,.cjs --fix"
+  },
+  "keywords": [
+    "markdown",
+    "documentation",
+    "jest",
+    "tests"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.29",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.4",
+    "typescript": "^5.7.0"
+  }
+}

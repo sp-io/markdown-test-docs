@@ -1,0 +1,28 @@
+# Source files
+src/
+
+# Tests
+__tests__/
+test/
+coverage/
+
+# Configuration files
+tsconfig.json
+.eslintrc.js
+jest.config.js
+.github/
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Documentation source
+doc-src/
