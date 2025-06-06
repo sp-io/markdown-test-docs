@@ -43,7 +43,7 @@ jobs:
       
       - name: Generate Test Documentation with GitHub Links
         run: |
-          node src/markdown-docs.cjs \
+          node dist/markdown-docs.cjs \
             --source ./src \
             --output ./docs \
             --github-url ${{ github.server_url }}/${{ github.repository }} \

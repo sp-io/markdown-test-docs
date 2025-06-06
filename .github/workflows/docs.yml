@@ -9,8 +9,8 @@ on:
       - 'src/**/*.spec.ts'
       - 'src/**/*.spec.js'
       - 'src/markdown-docs.cjs'
-      - 'src/index.ts'
-      - 'src/action.ts'
+      - '../../src/main.ts'
+      - '../../src/index.ts'
   workflow_dispatch:
 
 jobs:

@@ -1,18 +1,80 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+
+interface CommandLineOptions {
+  source: string | undefined;
+  output: string | undefined;
+  githubUrl: string | undefined;
+  githubBranch: string | undefined;
+  repositoryRoot: string | undefined;
+  verbose: boolean;
+}
+
+interface GeneratorOptions {
+  sourceDir?: string;
+  outputDir?: string;
+  githubUrl?: string;
+  githubBranch?: string;
+  repositoryRoot?: string;
+  verbose?: boolean;
+}
+
+interface DescribeBlock {
+  name: string;
+  lineNumber: number;
+  level: number;
+}
+
+interface TestCase {
+  testName: string;
+  shortName: string;
+  describeName: string;
+  link: string;
+  description: string;
+  lineNumber: number;
+  tags: string[];
+}
+
+interface TestCaseWithFile extends TestCase {
+  fileName: string;
+  filePath: string;
+  category: string;
+}
+
+interface TestDescription {
+  description: string[];
+  given: string;
+  when: string;
+  then: string;
+  and: string[];
+}
+
+interface FileSummary {
+  total: number;
+  categories: Record<string, number>;
+  tags: string[];
+}
+
+interface FileDocumentation {
+  fileName: string;
+  filePath: string;
+  fullPath: string;
+  tests: TestCase[];
+  summary: FileSummary;
+}
 
 // Parse command-line arguments
-function parseArgs() {
+function parseArgs(): CommandLineOptions {
   const args = process.argv.slice(2);
-  const options = {
-    source: null,
-    output: null,
-    githubUrl: null,
-    githubBranch: null,
-    repositoryRoot: null,
+  const options: CommandLineOptions = {
+    source: undefined,
+    output: undefined,
+    githubUrl: undefined,
+    githubBranch: undefined,
+    repositoryRoot: undefined,
     verbose: false
   };
 
@@ -45,24 +107,28 @@ function parseArgs() {
  * Extracts test information from TypeScript test files and generates markdown documentation
  */
 class MarkdownDocsGenerator {
+  private readonly testDir: string;
+  private readonly docsDir: string;
+  private readonly githubUrl: string | null;
+  private readonly githubBranch: string;
+  private readonly repositoryRoot: string;
+  private readonly verbose: boolean;
+  private readonly testFiles: string[];
+  private readonly documentation: Map<string, FileDocumentation>;
+  private readonly knownTags: Set<string>;
+
   /**
-   * @param {Object} options - Configuration options
-   * @param {string} [options.sourceDir] - Custom source directory path
-   * @param {string} [options.outputDir] - Custom output directory path
-   * @param {string} [options.githubUrl] - GitHub repository URL (e.g., 'https://github.com/username/repo')
-   * @param {string} [options.githubBranch] - GitHub branch name (default: 'main')
-   * @param {string} [options.repositoryRoot] - Repository root directory (default: current working directory)
-   * @param {boolean} [options.verbose] - Enable verbose logging (default: false)
+   * @param options - Configuration options
    */
-  constructor(options = {}) {
-    this.testDir = options.sourceDir ? path.resolve(options.sourceDir) : path.join(__dirname, 'src', 'test');
-    this.docsDir = options.outputDir ? path.resolve(options.outputDir) : path.join(__dirname, 'doc', 'tests');
+  constructor(options: GeneratorOptions = {}) {
+    this.testDir = options.sourceDir ? path.resolve(options.sourceDir) : path.join(process.cwd(), 'src', 'test');
+    this.docsDir = options.outputDir ? path.resolve(options.outputDir) : path.join(process.cwd(), 'doc', 'tests');
     this.githubUrl = options.githubUrl || null;
     this.githubBranch = options.githubBranch || 'main';
     this.repositoryRoot = options.repositoryRoot ? path.resolve(options.repositoryRoot) : process.cwd();
     this.verbose = options.verbose || false;
     this.testFiles = [];
-    this.documentation = new Map();
+    this.documentation = new Map<string, FileDocumentation>();
     this.knownTags = new Set(['given', 'when', 'then', 'and']);
 
     console.log(`Source directory: ${this.testDir}`);
@@ -80,7 +146,7 @@ class MarkdownDocsGenerator {
   /**
    * Initialize the documentation generation process
    */
-  async generate() {
+  async generate(): Promise<void> {
     console.log('🚀 Starting markdown documentation generation...');
     
     // Ensure docs directory exists
@@ -110,7 +176,7 @@ class MarkdownDocsGenerator {
   /**
    * Ensure the documentation directory exists
    */
-  ensureDocsDirectory() {
+  private ensureDocsDirectory(): void {
     if (!fs.existsSync(this.docsDir)) {
       fs.mkdirSync(this.docsDir, { recursive: true });
       console.log(`📁 Created directory: ${this.docsDir}`);
@@ -120,8 +186,8 @@ class MarkdownDocsGenerator {
   /**
    * Recursively find all test files
    */
-  findTestFiles() {
-    const findTestFilesRecursive = (dir) => {
+  private findTestFiles(): void {
+    const findTestFilesRecursive = (dir: string): void => {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       
       for (const entry of entries) {
@@ -142,7 +208,7 @@ class MarkdownDocsGenerator {
   /**
    * Process a single test file and extract test information
    */
-  async processTestFile(filePath) {
+  private async processTestFile(filePath: string): Promise<void> {
     const content = fs.readFileSync(filePath, 'utf8');
     const relativePath = path.relative(this.testDir, filePath);
     const fileName = path.basename(filePath, '.test.ts');
@@ -163,17 +229,14 @@ class MarkdownDocsGenerator {
   /**
    * Extract test information from file content
    */
-  extractTests(content, filePath) {
-    const tests = [];
+  private extractTests(content: string, filePath: string): TestCase[] {
+    const tests: TestCase[] = [];
     const lines = content.split('\n');
     
-    let currentDescribe = null;
-    let currentTest = null;
+    let currentDescribe: DescribeBlock | null = null;
     let inComment = false;
-    let commentLines = [];
+    let commentLines: string[] = [];
     let braceLevel = 0;
-    let inDescribeBlock = false;
-    let inTestBlock = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -211,7 +274,6 @@ class MarkdownDocsGenerator {
           lineNumber,
           level: braceLevel
         };
-        inDescribeBlock = true;
         continue;
       }
 
@@ -237,12 +299,10 @@ class MarkdownDocsGenerator {
 
         // Reset comment lines after processing
         commentLines = [];
-        inTestBlock = true;
       }
 
       // Reset scope tracking when leaving blocks
-      if (braceLevel < currentDescribe?.level) {
-        inDescribeBlock = false;
+      if (currentDescribe && braceLevel < currentDescribe.level) {
         currentDescribe = null;
       }
     }
@@ -253,12 +313,12 @@ class MarkdownDocsGenerator {
   /**
    * Parse test description from TSDoc comments
    */
-  parseTestDescription(commentLines) {
+  private parseTestDescription(commentLines: string[]): string {
     if (commentLines.length === 0) {
       return '';
     }
 
-    const sections = {
+    const sections: TestDescription = {
       description: [],
       given: '',
       when: '',
@@ -266,59 +326,35 @@ class MarkdownDocsGenerator {
       and: []
     };
     
-    let currentSection = 'description';
+    let currentSection: keyof TestDescription = 'description';
     let currentText = '';
 
     for (const line of commentLines) {
       if (line.startsWith('@given')) {
         // Save previous section
         if (currentText.trim()) {
-          if (currentSection === 'description') {
-            sections.description.push(currentText.trim());
-          } else if (currentSection === 'and') {
-            sections.and.push(currentText.trim());
-          } else {
-            sections[currentSection] = currentText.trim();
-          }
+          this.saveSectionText(sections, currentSection, currentText.trim());
         }
         currentSection = 'given';
         currentText = line.replace('@given', '').trim();
       } else if (line.startsWith('@when')) {
         // Save previous section
         if (currentText.trim()) {
-          if (currentSection === 'description') {
-            sections.description.push(currentText.trim());
-          } else if (currentSection === 'and') {
-            sections.and.push(currentText.trim());
-          } else {
-            sections[currentSection] = currentText.trim();
-          }
+          this.saveSectionText(sections, currentSection, currentText.trim());
         }
         currentSection = 'when';
         currentText = line.replace('@when', '').trim();
       } else if (line.startsWith('@then')) {
         // Save previous section
         if (currentText.trim()) {
-          if (currentSection === 'description') {
-            sections.description.push(currentText.trim());
-          } else if (currentSection === 'and') {
-            sections.and.push(currentText.trim());
-          } else {
-            sections[currentSection] = currentText.trim();
-          }
+          this.saveSectionText(sections, currentSection, currentText.trim());
         }
         currentSection = 'then';
         currentText = line.replace('@then', '').trim();
       } else if (line.startsWith('@and')) {
         // Save previous section
         if (currentText.trim()) {
-          if (currentSection === 'description') {
-            sections.description.push(currentText.trim());
-          } else if (currentSection === 'and') {
-            sections.and.push(currentText.trim());
-          } else {
-            sections[currentSection] = currentText.trim();
-          }
+          this.saveSectionText(sections, currentSection, currentText.trim());
         }
         currentSection = 'and';
         currentText = line.replace('@and', '').trim();
@@ -345,17 +381,11 @@ class MarkdownDocsGenerator {
 
     // Save the last section
     if (currentText.trim()) {
-      if (currentSection === 'description') {
-        sections.description.push(currentText.trim());
-      } else if (currentSection === 'and') {
-        sections.and.push(currentText.trim());
-      } else {
-        sections[currentSection] = currentText.trim();
-      }
+      this.saveSectionText(sections, currentSection, currentText.trim());
     }
 
     // Build formatted description
-    const formattedParts = [];
+    const formattedParts: string[] = [];
     
     // Add main description if available
     if (sections.description.length > 0) {
@@ -384,10 +414,23 @@ class MarkdownDocsGenerator {
   }
 
   /**
+   * Helper method to save section text to the appropriate section
+   */
+  private saveSectionText(sections: TestDescription, currentSection: keyof TestDescription, text: string): void {
+    if (currentSection === 'description') {
+      sections.description.push(text);
+    } else if (currentSection === 'and') {
+      sections.and.push(text);
+    } else {
+      sections[currentSection] = text;
+    }
+  }
+
+  /**
    * Extract tags from test name and description
    */
-  extractTags(describeName, description) {
-    const tags = [];
+  private extractTags(describeName: string, description: string): string[] {
+    const tags: string[] = [];
     
     // Extract tags from describe name (e.g., [@slow][@proving])
     const describeTagMatches = describeName.match(/\[@([^\]]+)\]/g);
@@ -408,13 +451,8 @@ class MarkdownDocsGenerator {
 
   /**
    * Generate a link to the specific test in the file
-   * @param {string} filePath - Full path to the test file
-   * @param {number} lineNumber - Line number of the test
-   * @param {string} describeName - Name of the describe block
-   * @param {string} testName - Name of the test case
-   * @returns {string} Link to the test (GitHub URL if configured, otherwise relative path)
    */
-  generateTestLink(filePath, lineNumber, describeName, testName) {
+  private generateTestLink(filePath: string, lineNumber: number, describeName: string, testName: string): string {
     // Calculate path relative to repository root
     const repoRelativePath = path.relative(this.repositoryRoot, filePath);
     
@@ -433,10 +471,10 @@ class MarkdownDocsGenerator {
   /**
    * Generate a summary for the file
    */
-  generateFileSummary(tests) {
+  private generateFileSummary(tests: TestCase[]): FileSummary {
     const total = tests.length;
-    const categories = {};
-    const tags = new Set();
+    const categories: Record<string, number> = {};
+    const tags = new Set<string>();
 
     tests.forEach(test => {
       // Categorize by describe name
@@ -457,7 +495,7 @@ class MarkdownDocsGenerator {
   /**
    * Generate markdown files for each test file
    */
-  generateMarkdownFiles() {
+  private generateMarkdownFiles(): void {
     for (const [relativePath, fileData] of this.documentation) {
       const markdownPath = path.join(this.docsDir, `${fileData.fileName}.md`);
       const content = this.generateMarkdownContent(fileData);
@@ -470,7 +508,7 @@ class MarkdownDocsGenerator {
   /**
    * Generate markdown content for a single file
    */
-  generateMarkdownContent(fileData) {
+  private generateMarkdownContent(fileData: FileDocumentation): string {
     const { fileName, filePath, tests, summary } = fileData;
     
     let content = `# ${fileName} Test Documentation\n\n`;
@@ -513,7 +551,7 @@ class MarkdownDocsGenerator {
   /**
    * Escape markdown special characters
    */
-  escapeMarkdown(text) {
+  private escapeMarkdown(text: string): string {
     return text
       .replace(/\|/g, '\\|')
       .replace(/\n/g, ' ')
@@ -524,11 +562,11 @@ class MarkdownDocsGenerator {
   /**
    * Generate comprehensive ALL_TESTS.md file with all test cases
    */
-  generateAllTestsFile() {
+  private generateAllTestsFile(): void {
     const allTestsPath = path.join(this.docsDir, 'ALL_TESTS.md');
     
     // Collect all tests from all files
-    const allTests = [];
+    const allTests: TestCaseWithFile[] = [];
     for (const [relativePath, fileData] of this.documentation) {
       for (const test of fileData.tests) {
         allTests.push({
@@ -557,7 +595,7 @@ class MarkdownDocsGenerator {
     content += `**Total Test Cases:** ${allTests.length}\n\n`;
 
     // Add statistics by category
-    const categoryStats = {};
+    const categoryStats: Record<string, number> = {};
     allTests.forEach(test => {
       categoryStats[test.category] = (categoryStats[test.category] || 0) + 1;
     });
@@ -584,7 +622,7 @@ class MarkdownDocsGenerator {
     }
 
     // Add tag-based index
-    const allTags = new Set();
+    const allTags = new Set<string>();
     allTests.forEach(test => {
       test.tags.forEach(tag => allTags.add(tag));
     });
@@ -612,7 +650,7 @@ class MarkdownDocsGenerator {
 
     content += '\n---\n';
     content += `*Generated on ${new Date().toISOString()}*\n`;
-    content += '*Generator: markdown-docs.cjs*\n';
+    content += '*Generator: markdown-docs.ts*\n';
 
     fs.writeFileSync(allTestsPath, content, 'utf8');
     console.log(`📊 Generated all tests file: ${allTestsPath}`);
@@ -621,14 +659,15 @@ class MarkdownDocsGenerator {
   /**
    * Get category name from file path
    */
-  getCategoryFromPath(relativePath) {
+  private getCategoryFromPath(relativePath: string): string {
     const dir = path.dirname(relativePath);
     return dir.charAt(0).toUpperCase() + dir.slice(1);
   }
+
   /**
    * Generate the index file listing all documented files
    */
-  generateIndexFile() {
+  private generateIndexFile(): void {
     const indexPath = path.join(this.docsDir, 'README.md');
     
     let content = '# Test Documentation Index\n\n';
@@ -660,14 +699,14 @@ class MarkdownDocsGenerator {
 
     // Add detailed breakdown by directory
     content += '\n## Directory Structure\n\n';
-    const directories = new Map();
+    const directories = new Map<string, FileDocumentation[]>();
     
     for (const [relativePath, fileData] of this.documentation) {
       const dir = path.dirname(relativePath);
       if (!directories.has(dir)) {
         directories.set(dir, []);
       }
-      directories.get(dir).push(fileData);
+      directories.get(dir)!.push(fileData);
     }
 
     for (const [dir, files] of directories) {
@@ -683,37 +722,19 @@ class MarkdownDocsGenerator {
 
     content += '\n---\n';
     content += `*Generated on ${new Date().toISOString()}*\n`;
-    content += '*Generator: markdown-docs.cjs*\n';
+    content += '*Generator: markdown-docs.ts*\n';
 
     fs.writeFileSync(indexPath, content, 'utf8');
     console.log(`📋 Generated index: ${indexPath}`);
   }
 }
 
-// Main execution
-if (require.main === module) {
-  const options = parseArgs();
-  const generator = new MarkdownDocsGenerator({
-    sourceDir: options.source,
-    outputDir: options.output,
-    githubUrl: options.githubUrl,
-    githubBranch: options.githubBranch,
-    repositoryRoot: options.repositoryRoot,
-    verbose: options.verbose
-  });
-
-  generator.generate().catch(error => {
-    console.error('❌ Error generating documentation:', error);
-    process.exit(1);
-  });
-}
-
 /**
  * Print usage information
  */
-function printUsage() {
+function printUsage(): void {
   console.log(`
-Usage: markdown-docs.cjs [options]
+Usage: markdown-docs.ts [options]
 
 Options:
   --source <path>          Specify custom source directory (default: ./src/test)
@@ -724,12 +745,37 @@ Options:
   --verbose, -v            Enable verbose logging (shows unknown tags and additional info)
 
 Examples:
-  markdown-docs.cjs --source ./custom/test-dir --output ./custom/docs-dir
+  tsx markdown-docs.ts --source ./custom/test-dir --output ./custom/docs-dir
   
-  markdown-docs.cjs --github-url https://github.com/username/repo --github-branch main
+  tsx markdown-docs.ts --github-url https://github.com/username/repo --github-branch main
   
-  markdown-docs.cjs --source ./src/test --github-url https://github.com/username/repo --repository-root ./ --verbose
+  tsx markdown-docs.ts --source ./src/test --github-url https://github.com/username/repo --repository-root ./ --verbose
 `);
 }
 
-module.exports = MarkdownDocsGenerator;
+// Main execution
+async function main(): Promise<void> {
+  const options = parseArgs();
+  const generator = new MarkdownDocsGenerator({
+    sourceDir: options.source,
+    outputDir: options.output,
+    githubUrl: options.githubUrl,
+    githubBranch: options.githubBranch,
+    repositoryRoot: options.repositoryRoot,
+    verbose: options.verbose
+  });
+
+  try {
+    await generator.generate();
+  } catch (error) {
+    console.error('❌ Error generating documentation:', error);
+    process.exit(1);
+  }
+}
+
+// Only run if this is the main module
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
+
+export default MarkdownDocsGenerator;

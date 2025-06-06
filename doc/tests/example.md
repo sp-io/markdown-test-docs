@@ -21,4 +21,4 @@
 | Documentation Generation [@advanced] > should parse complex test structures | [L65](src/test/example.test.ts#L65) | **Advanced feature test**<br>**Given:** a test file with complex structure<br>**When:** the documentation is generated<br>**Then:** it should correctly parse all test cases<br>**And:** a MarkdownDocsGenerator configured to parse it |
 
 ---
-*Generated on 2025-06-05T08:52:55.946Z*
+*Generated on 2025-06-06T09:20:51.810Z*

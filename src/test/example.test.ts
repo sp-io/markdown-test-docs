@@ -2,7 +2,7 @@
  * Example test file to demonstrate documentation generation
  */
 
-import { MarkdownDocsGenerator } from '../index';
+import { MarkdownDocsGenerator } from '../main';
 
 describe('MarkdownDocsGenerator', () => {
   /**
