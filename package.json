@@ -8,13 +8,13 @@
     "node": ">=20.0.0"
   },
   "bin": {
-    "markdown-docs": "src/markdown-docs.ts"
+    "markdown-docs": "src/cli.ts"
   },
   "scripts": {
-    "start": "tsx src/markdown-docs.ts --source ./src --output ./doc/tests",
-    "start:github": "tsx src/markdown-docs.ts --source ./src --output ./doc/tests --github-url https://github.com/username/tsdoc-test-docs --github-branch main --repository-root ./",
-    "start:verbose": "tsx src/markdown-docs.ts --source ./src --output ./doc/tests --verbose",
-    "start:github:verbose": "tsx src/markdown-docs.ts --source ./src --output ./doc/tests --github-url https://github.com/username/tsdoc-test-docs --github-branch main --repository-root ./ --verbose",
+    "start": "tsx src/cli.ts --source ./src --output ./doc/tests",
+    "start:github": "tsx src/cli.ts --source ./src --output ./doc/tests --github-url https://github.com/username/tsdoc-test-docs --github-branch main --repository-root ./",
+    "start:verbose": "tsx src/cli.ts --source ./src --output ./doc/tests --verbose",
+    "start:github:verbose": "tsx src/cli.ts --source ./src --output ./doc/tests --github-url https://github.com/username/tsdoc-test-docs --github-branch main --repository-root ./ --verbose",
     "build": "npm run bundle",
     "build:lib": "tsc",
     "build:action": "tsc src/index.ts --outDir dist --target ES2019 --module CommonJS --esModuleInterop --declaration false",

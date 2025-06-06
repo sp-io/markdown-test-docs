@@ -121,11 +121,16 @@ class MarkdownDocsGenerator {
    * @param options - Configuration options
    */
   constructor(options: GeneratorOptions = {}) {
-    this.testDir = options.sourceDir ? path.resolve(options.sourceDir) : path.join(process.cwd(), 'src', 'test');
-    this.docsDir = options.outputDir ? path.resolve(options.outputDir) : path.join(process.cwd(), 'doc', 'tests');
-    this.githubUrl = options.githubUrl || null;
-    this.githubBranch = options.githubBranch || 'main';
-    this.repositoryRoot = options.repositoryRoot ? path.resolve(options.repositoryRoot) : process.cwd();
+    // Helper function to check if a string is non-empty
+    const isNonEmptyString = (str: string | undefined): str is string => {
+      return typeof str === 'string' && str.trim().length > 0;
+    };
+
+    this.testDir = isNonEmptyString(options.sourceDir) ? path.resolve(options.sourceDir) : path.join(process.cwd(), 'src', 'test');
+    this.docsDir = isNonEmptyString(options.outputDir) ? path.resolve(options.outputDir) : path.join(process.cwd(), 'doc', 'tests');
+    this.githubUrl = isNonEmptyString(options.githubUrl) ? options.githubUrl.replace(/\.git$/, '') : null;
+    this.githubBranch = isNonEmptyString(options.githubBranch) ? options.githubBranch : 'main';
+    this.repositoryRoot = isNonEmptyString(options.repositoryRoot) ? path.resolve(options.repositoryRoot) : process.cwd();
     this.verbose = options.verbose || false;
     this.testFiles = [];
     this.documentation = new Map<string, FileDocumentation>();
@@ -187,7 +192,18 @@ class MarkdownDocsGenerator {
    * Recursively find all test files
    */
   private findTestFiles(): void {
+    console.log(`🔍 Looking for test files in: ${this.testDir}`);
+    
+    // Check if directory exists
+    if (!fs.existsSync(this.testDir)) {
+      throw new Error(`Source directory does not exist: ${this.testDir}`);
+    }
+
     const findTestFilesRecursive = (dir: string): void => {
+      if (this.verbose) {
+        console.log(`   Scanning directory: ${dir}`);
+      }
+      
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       
       for (const entry of entries) {
@@ -197,6 +213,9 @@ class MarkdownDocsGenerator {
           findTestFilesRecursive(fullPath);
         } else if (entry.isFile() && (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts'))) {
           this.testFiles.push(fullPath);
+          if (this.verbose) {
+            console.log(`   Found test file: ${fullPath}`);
+          }
         }
       }
     };
@@ -753,7 +772,7 @@ Examples:
 `);
 }
 
-// Main execution
+// Main execution function for CLI
 async function main(): Promise<void> {
   const options = parseArgs();
   const generator = new MarkdownDocsGenerator({
@@ -771,11 +790,6 @@ async function main(): Promise<void> {
     console.error('❌ Error generating documentation:', error);
     process.exit(1);
   }
-}
-
-// Only run if this is the main module
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
 }
 
 export default MarkdownDocsGenerator;
