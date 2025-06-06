@@ -1,17 +1,5 @@
-#!/usr/bin/env node
-
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
-
-interface CommandLineOptions {
-  source: string | undefined;
-  output: string | undefined;
-  githubUrl: string | undefined;
-  githubBranch: string | undefined;
-  repositoryRoot: string | undefined;
-  verbose: boolean;
-}
 
 interface GeneratorOptions {
   sourceDir?: string;
@@ -64,42 +52,6 @@ interface FileDocumentation {
   fullPath: string;
   tests: TestCase[];
   summary: FileSummary;
-}
-
-// Parse command-line arguments
-function parseArgs(): CommandLineOptions {
-  const args = process.argv.slice(2);
-  const options: CommandLineOptions = {
-    source: undefined,
-    output: undefined,
-    githubUrl: undefined,
-    githubBranch: undefined,
-    repositoryRoot: undefined,
-    verbose: false
-  };
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--source' && i + 1 < args.length) {
-      options.source = args[i + 1];
-      i++;
-    } else if (args[i] === '--output' && i + 1 < args.length) {
-      options.output = args[i + 1];
-      i++;
-    } else if (args[i] === '--github-url' && i + 1 < args.length) {
-      options.githubUrl = args[i + 1];
-      i++;
-    } else if (args[i] === '--github-branch' && i + 1 < args.length) {
-      options.githubBranch = args[i + 1];
-      i++;
-    } else if (args[i] === '--repository-root' && i + 1 < args.length) {
-      options.repositoryRoot = args[i + 1];
-      i++;
-    } else if (args[i] === '--verbose' || args[i] === '-v') {
-      options.verbose = true;
-    }
-  }
-
-  return options;
 }
 
 /**
@@ -745,50 +697,6 @@ class MarkdownDocsGenerator {
 
     fs.writeFileSync(indexPath, content, 'utf8');
     console.log(`📋 Generated index: ${indexPath}`);
-  }
-}
-
-/**
- * Print usage information
- */
-function printUsage(): void {
-  console.log(`
-Usage: markdown-docs.ts [options]
-
-Options:
-  --source <path>          Specify custom source directory (default: ./src/test)
-  --output <path>          Specify custom output directory (default: ./doc/tests)
-  --github-url <url>       GitHub repository URL (e.g., 'https://github.com/username/repo')
-  --github-branch <branch> GitHub branch name (default: 'main')
-  --repository-root <path> Repository root directory (default: current working directory)
-  --verbose, -v            Enable verbose logging (shows unknown tags and additional info)
-
-Examples:
-  tsx markdown-docs.ts --source ./custom/test-dir --output ./custom/docs-dir
-  
-  tsx markdown-docs.ts --github-url https://github.com/username/repo --github-branch main
-  
-  tsx markdown-docs.ts --source ./src/test --github-url https://github.com/username/repo --repository-root ./ --verbose
-`);
-}
-
-// Main execution function for CLI
-async function main(): Promise<void> {
-  const options = parseArgs();
-  const generator = new MarkdownDocsGenerator({
-    sourceDir: options.source,
-    outputDir: options.output,
-    githubUrl: options.githubUrl,
-    githubBranch: options.githubBranch,
-    repositoryRoot: options.repositoryRoot,
-    verbose: options.verbose
-  });
-
-  try {
-    await generator.generate();
-  } catch (error) {
-    console.error('❌ Error generating documentation:', error);
-    process.exit(1);
   }
 }
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 interface GeneratorOptions {
     sourceDir?: string;
     outputDir?: string;

@@ -1718,7 +1718,7 @@ function requireTimers () {
 	return timers;
 }
 
-var main$1 = {exports: {}};
+var main = {exports: {}};
 
 var sbmh;
 var hasRequiredSbmh;
@@ -3256,7 +3256,7 @@ function requireUrlencoded () {
 var hasRequiredMain;
 
 function requireMain () {
-	if (hasRequiredMain) return main$1.exports;
+	if (hasRequiredMain) return main.exports;
 	hasRequiredMain = 1;
 
 	const WritableStream = require$$0$7.Writable;
@@ -3337,12 +3337,12 @@ function requireMain () {
 	  this._parser.write(chunk, cb);
 	};
 
-	main$1.exports = Busboy;
-	main$1.exports.default = Busboy;
-	main$1.exports.Busboy = Busboy;
+	main.exports = Busboy;
+	main.exports.default = Busboy;
+	main.exports.Busboy = Busboy;
 
-	main$1.exports.Dicer = Dicer;
-	return main$1.exports;
+	main.exports.Dicer = Dicer;
+	return main.exports;
 }
 
 var constants$3;
@@ -27246,44 +27246,6 @@ function requireCore () {
 
 var coreExports = requireCore();
 
-// Parse command-line arguments
-function parseArgs() {
-    const args = process.argv.slice(2);
-    const options = {
-        source: undefined,
-        output: undefined,
-        githubUrl: undefined,
-        githubBranch: undefined,
-        repositoryRoot: undefined,
-        verbose: false
-    };
-    for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--source' && i + 1 < args.length) {
-            options.source = args[i + 1];
-            i++;
-        }
-        else if (args[i] === '--output' && i + 1 < args.length) {
-            options.output = args[i + 1];
-            i++;
-        }
-        else if (args[i] === '--github-url' && i + 1 < args.length) {
-            options.githubUrl = args[i + 1];
-            i++;
-        }
-        else if (args[i] === '--github-branch' && i + 1 < args.length) {
-            options.githubBranch = args[i + 1];
-            i++;
-        }
-        else if (args[i] === '--repository-root' && i + 1 < args.length) {
-            options.repositoryRoot = args[i + 1];
-            i++;
-        }
-        else if (args[i] === '--verbose' || args[i] === '-v') {
-            options.verbose = true;
-        }
-    }
-    return options;
-}
 /**
  * Markdown documentation generator for Jest test files
  * Extracts test information from TypeScript test files and generates markdown documentation
@@ -27293,11 +27255,15 @@ class MarkdownDocsGenerator {
      * @param options - Configuration options
      */
     constructor(options = {}) {
-        this.testDir = options.sourceDir ? path.resolve(options.sourceDir) : path.join(process.cwd(), 'src', 'test');
-        this.docsDir = options.outputDir ? path.resolve(options.outputDir) : path.join(process.cwd(), 'doc', 'tests');
-        this.githubUrl = options.githubUrl || null;
-        this.githubBranch = options.githubBranch || 'main';
-        this.repositoryRoot = options.repositoryRoot ? path.resolve(options.repositoryRoot) : process.cwd();
+        // Helper function to check if a string is non-empty
+        const isNonEmptyString = (str) => {
+            return typeof str === 'string' && str.trim().length > 0;
+        };
+        this.testDir = isNonEmptyString(options.sourceDir) ? path.resolve(options.sourceDir) : path.join(process.cwd(), 'src', 'test');
+        this.docsDir = isNonEmptyString(options.outputDir) ? path.resolve(options.outputDir) : path.join(process.cwd(), 'doc', 'tests');
+        this.githubUrl = isNonEmptyString(options.githubUrl) ? options.githubUrl.replace(/\.git$/, '') : null;
+        this.githubBranch = isNonEmptyString(options.githubBranch) ? options.githubBranch : 'main';
+        this.repositoryRoot = isNonEmptyString(options.repositoryRoot) ? path.resolve(options.repositoryRoot) : process.cwd();
         this.verbose = options.verbose || false;
         this.testFiles = [];
         this.documentation = new Map();
@@ -27348,7 +27314,15 @@ class MarkdownDocsGenerator {
      * Recursively find all test files
      */
     findTestFiles() {
+        console.log(`🔍 Looking for test files in: ${this.testDir}`);
+        // Check if directory exists
+        if (!fs.existsSync(this.testDir)) {
+            throw new Error(`Source directory does not exist: ${this.testDir}`);
+        }
         const findTestFilesRecursive = (dir) => {
+            if (this.verbose) {
+                console.log(`   Scanning directory: ${dir}`);
+            }
             const entries = fs.readdirSync(dir, { withFileTypes: true });
             for (const entry of entries) {
                 const fullPath = path.join(dir, entry.name);
@@ -27357,6 +27331,9 @@ class MarkdownDocsGenerator {
                 }
                 else if (entry.isFile() && (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts'))) {
                     this.testFiles.push(fullPath);
+                    if (this.verbose) {
+                        console.log(`   Found test file: ${fullPath}`);
+                    }
                 }
             }
         };
@@ -27818,29 +27795,6 @@ class MarkdownDocsGenerator {
         console.log(`📋 Generated index: ${indexPath}`);
     }
 }
-// Main execution
-async function main() {
-    const options = parseArgs();
-    const generator = new MarkdownDocsGenerator({
-        sourceDir: options.source,
-        outputDir: options.output,
-        githubUrl: options.githubUrl,
-        githubBranch: options.githubBranch,
-        repositoryRoot: options.repositoryRoot,
-        verbose: options.verbose
-    });
-    try {
-        await generator.generate();
-    }
-    catch (error) {
-        console.error('❌ Error generating documentation:', error);
-        process.exit(1);
-    }
-}
-// Only run if this is the main module
-if (import.meta.url === `file://${process.argv[1]}`) {
-    main();
-}
 
 /**
  * GitHub Action entry point
@@ -27849,19 +27803,39 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 async function run() {
     try {
         // Get inputs from the action
-        const sourceDir = coreExports.getInput('source') || './src';
-        const outputDir = coreExports.getInput('output') || './doc-tests';
-        const githubUrl = coreExports.getInput('github-url') || '';
-        const githubBranch = coreExports.getInput('github-branch') || 'main';
-        const repositoryRoot = coreExports.getInput('repository-root') || './';
-        const verbose = coreExports.getInput('verbose') === 'true';
+        const sourceInput = coreExports.getInput('source');
+        const outputInput = coreExports.getInput('output');
+        const githubUrlInput = coreExports.getInput('github-url');
+        const githubBranchInput = coreExports.getInput('github-branch');
+        const repositoryRootInput = coreExports.getInput('repository-root');
+        const verboseInput = coreExports.getInput('verbose');
+        // Helper function to convert empty strings to undefined
+        const normalizeInput = (input) => {
+            return input && input.trim().length > 0 ? input.trim() : undefined;
+        };
+        // Normalize inputs
+        const sourceDir = normalizeInput(sourceInput);
+        const outputDir = normalizeInput(outputInput);
+        const githubUrl = normalizeInput(githubUrlInput);
+        const githubBranch = normalizeInput(githubBranchInput);
+        const repositoryRoot = normalizeInput(repositoryRootInput);
+        const verbose = verboseInput === 'true';
         console.log('📝 GitHub Action: Markdown Test Documentation Generator');
-        console.log(`📂 Source directory: ${sourceDir}`);
-        console.log(`📁 Output directory: ${outputDir}`);
-        console.log(`🏠 Repository root: ${repositoryRoot}`);
+        console.log('📋 Raw inputs received:');
+        console.log(`   source: "${sourceInput}"`);
+        console.log(`   output: "${outputInput}"`);
+        console.log(`   github-url: "${githubUrlInput}"`);
+        console.log(`   github-branch: "${githubBranchInput}"`);
+        console.log(`   repository-root: "${repositoryRootInput}"`);
+        console.log(`   verbose: "${verboseInput}"`);
+        console.log('');
+        console.log('🔧 Processed inputs:');
+        console.log(`📂 Source directory: ${sourceDir || 'default (./src/test)'}`);
+        console.log(`📁 Output directory: ${outputDir || 'default (./doc/tests)'}`);
+        console.log(`🏠 Repository root: ${repositoryRoot || 'default (current directory)'}`);
         if (githubUrl) {
             console.log(`🔗 GitHub URL: ${githubUrl}`);
-            console.log(`🌿 GitHub branch: ${githubBranch}`);
+            console.log(`🌿 GitHub branch: ${githubBranch || 'main'}`);
         }
         else {
             console.log('📄 Using local file links (no GitHub URL provided)');
@@ -27869,11 +27843,12 @@ async function run() {
         if (verbose) {
             console.log('🔍 Verbose mode enabled');
         }
+        console.log('');
         // Create and run the generator
         const generator = new MarkdownDocsGenerator({
             sourceDir,
             outputDir,
-            githubUrl: githubUrl || undefined,
+            githubUrl,
             githubBranch,
             repositoryRoot,
             verbose
@@ -27881,13 +27856,17 @@ async function run() {
         await generator.generate();
         // Set outputs
         coreExports.setOutput('success', 'true');
-        coreExports.setOutput('output-dir', outputDir);
+        coreExports.setOutput('output-dir', outputDir || './doc/tests');
         coreExports.setOutput('github-enabled', githubUrl ? 'true' : 'false');
         console.log('✅ Action completed successfully');
     }
     catch (error) {
-        console.error('❌ Action failed:', error);
-        coreExports.setFailed(error instanceof Error ? error.message : String(error));
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('❌ Action failed:', errorMessage);
+        if (error instanceof Error && error.stack) {
+            console.error('Stack trace:', error.stack);
+        }
+        coreExports.setFailed(errorMessage);
     }
 }
 // Run the action
