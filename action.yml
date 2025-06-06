@@ -28,4 +28,4 @@ inputs:
     default: "false"
 runs:
   using: "node22"
-  main: "../../../dist/action.js"
+  main: "dist/action.js"

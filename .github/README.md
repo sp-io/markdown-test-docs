@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: your-username/tsdoc-test-docs@main
+      - uses: sp-io/markdown-test-docs@main
         with:
           source: "./src"
           output: "./docs/tests"
