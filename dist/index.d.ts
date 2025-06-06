@@ -9,16 +9,29 @@
 export declare class MarkdownDocsGenerator {
     private testDir;
     private docsDir;
+    private githubUrl;
+    private githubBranch;
+    private repositoryRoot;
+    private verbose;
     private testFiles;
     private documentation;
+    private knownTags;
     /**
      * @param {Object} options - Configuration options
      * @param {string} [options.sourceDir] - Custom source directory path
      * @param {string} [options.outputDir] - Custom output directory path
+     * @param {string} [options.githubUrl] - GitHub repository URL (e.g., 'https://github.com/username/repo')
+     * @param {string} [options.githubBranch] - GitHub branch name (default: 'main')
+     * @param {string} [options.repositoryRoot] - Repository root directory (default: current working directory)
+     * @param {boolean} [options.verbose] - Enable verbose logging (default: false)
      */
     constructor(options?: {
         sourceDir?: string;
         outputDir?: string;
+        githubUrl?: string;
+        githubBranch?: string;
+        repositoryRoot?: string;
+        verbose?: boolean;
     });
     /**
      * Initialize the documentation generation process
@@ -36,6 +49,10 @@ export declare class MarkdownDocsGenerator {
      * Process a single test file and extract test information
      */
     private processTestFile;
+    /**
+     * Generate a link to the specific test in the file
+     */
+    private generateTestLink;
     /**
      * Generate markdown files for each test file
      */

@@ -9,15 +9,28 @@ declare class MarkdownDocsGenerator {
      * @param {Object} options - Configuration options
      * @param {string} [options.sourceDir] - Custom source directory path
      * @param {string} [options.outputDir] - Custom output directory path
+     * @param {string} [options.githubUrl] - GitHub repository URL (e.g., 'https://github.com/username/repo')
+     * @param {string} [options.githubBranch] - GitHub branch name (default: 'main')
+     * @param {string} [options.repositoryRoot] - Repository root directory (default: current working directory)
+     * @param {boolean} [options.verbose] - Enable verbose logging (default: false)
      */
     constructor(options?: {
         sourceDir?: string | undefined;
         outputDir?: string | undefined;
+        githubUrl?: string | undefined;
+        githubBranch?: string | undefined;
+        repositoryRoot?: string | undefined;
+        verbose?: boolean | undefined;
     });
     testDir: string;
     docsDir: string;
+    githubUrl: string | null;
+    githubBranch: string;
+    repositoryRoot: string;
+    verbose: boolean;
     testFiles: any[];
     documentation: Map<any, any>;
+    knownTags: Set<string>;
     /**
      * Initialize the documentation generation process
      */
@@ -56,8 +69,13 @@ declare class MarkdownDocsGenerator {
     extractTags(describeName: any, description: any): any[];
     /**
      * Generate a link to the specific test in the file
+     * @param {string} filePath - Full path to the test file
+     * @param {number} lineNumber - Line number of the test
+     * @param {string} describeName - Name of the describe block
+     * @param {string} testName - Name of the test case
+     * @returns {string} Link to the test (GitHub URL if configured, otherwise relative path)
      */
-    generateTestLink(filePath: any, lineNumber: any, describeName: any, testName: any): string;
+    generateTestLink(filePath: string, lineNumber: number, describeName: string, testName: string): string;
     /**
      * Generate a summary for the file
      */

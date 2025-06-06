@@ -17,6 +17,7 @@
     "build": "node scripts/build-action.js",
     "build:lib": "tsc",
     "build:action": "tsc src/action.ts --outDir dist --target ES2019 --module CommonJS --esModuleInterop --declaration false",
+    "bundle": "npx ncc build src/index.ts -o dist",
     "test": "jest",
     "lint": "eslint . --ext .js,.ts,.cjs",
     "lint:fix": "eslint . --ext .js,.ts,.cjs --fix"
@@ -39,6 +40,7 @@
     "@types/node": "^22.15.29",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
     "@typescript-eslint/parser": "^8.33.1",
+    "@vercel/ncc": "^0.38.3",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.3.4",

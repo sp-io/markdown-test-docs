@@ -1,4 +1,11 @@
-"use strict";
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ 407:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+
 /**
  * Export the main MarkdownDocsGenerator class
  * This allows importing the generator in TypeScript projects
@@ -36,10 +43,10 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MarkdownDocsGenerator = void 0;
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
+const fs = __importStar(__nccwpck_require__(896));
+const path = __importStar(__nccwpck_require__(928));
 /**
  * Markdown documentation generator for Jest/Vitest test files
  * Extracts test information from TypeScript test files and generates markdown documentation
@@ -52,6 +59,7 @@ class MarkdownDocsGenerator {
      * @param {string} [options.githubUrl] - GitHub repository URL (e.g., 'https://github.com/username/repo')
      * @param {string} [options.githubBranch] - GitHub branch name (default: 'main')
      * @param {string} [options.repositoryRoot] - Repository root directory (default: current working directory)
+     * @param {boolean} [options.verbose] - Enable verbose logging (default: false)
      */
     constructor(options = {}) {
         this.testDir = options.sourceDir ? path.resolve(options.sourceDir) : path.join(process.cwd(), 'src', 'test');
@@ -59,14 +67,19 @@ class MarkdownDocsGenerator {
         this.githubUrl = options.githubUrl || null;
         this.githubBranch = options.githubBranch || 'main';
         this.repositoryRoot = options.repositoryRoot ? path.resolve(options.repositoryRoot) : process.cwd();
+        this.verbose = options.verbose || false;
         this.testFiles = [];
         this.documentation = new Map();
+        this.knownTags = new Set(['given', 'when', 'then', 'and']);
         console.log(`Source directory: ${this.testDir}`);
         console.log(`Output directory: ${this.docsDir}`);
         console.log(`Repository root: ${this.repositoryRoot}`);
         if (this.githubUrl) {
             console.log(`GitHub URL: ${this.githubUrl}`);
             console.log(`GitHub branch: ${this.githubBranch}`);
+        }
+        if (this.verbose) {
+            console.log('🔍 Verbose mode enabled');
         }
     }
     /**
@@ -172,7 +185,7 @@ class MarkdownDocsGenerator {
 }
 exports.MarkdownDocsGenerator = MarkdownDocsGenerator;
 // Enable direct execution from command line
-if (require.main === module) {
+if (require.main === require.cache[eval('__filename')]) {
     // Parse command line arguments
     const args = process.argv.slice(2);
     const options = {};
@@ -197,6 +210,9 @@ if (require.main === module) {
             options.repositoryRoot = args[i + 1];
             i++;
         }
+        else if (args[i] === '--verbose' || args[i] === '-v') {
+            options.verbose = true;
+        }
     }
     const generator = new MarkdownDocsGenerator(options);
     generator.generate().catch(error => {
@@ -204,3 +220,68 @@ if (require.main === module) {
         process.exit(1);
     });
 }
+
+
+/***/ }),
+
+/***/ 896:
+/***/ ((module) => {
+
+module.exports = require("fs");
+
+/***/ }),
+
+/***/ 928:
+/***/ ((module) => {
+
+module.exports = require("path");
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __nccwpck_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		var threw = true;
+/******/ 		try {
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
+/******/ 			threw = false;
+/******/ 		} finally {
+/******/ 			if(threw) delete __webpack_module_cache__[moduleId];
+/******/ 		}
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/compat */
+/******/ 	
+/******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
+/******/ 	
+/************************************************************************/
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __nccwpck_require__(407);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
+/******/ })()
+;
