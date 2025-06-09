@@ -25,4 +25,4 @@
 | [L105](src/test/and-tag-examples.test.ts#L105) | Performance Optimization [@performance] > should optimize performance through intelligent caching | **Caching strategy validation**<br>**Given:** cache is empty<br>**When:** multiple requests for same data occur<br>**Then:** subsequent requests should hit cache<br>**And:** cache size limit is configured<br>**And:** cache miss happens on first request<br>**And:** data is retrieved from source<br>**And:** cached for future requests<br>**And:** response time should improve significantly<br>**And:** cache memory usage should be within limits<br>**And:** cache hit ratio should meet performance targets |
 
 ---
-*Generated on 2025-06-09T12:30:56.945Z*
+*Generated on 2025-06-09T13:03:00.306Z*

@@ -11,4 +11,4 @@
 | [L11](src/test/X/A.test.ts#L11) | Sample test in X directory > should preserve folder structure | **Given:** a test file in subdirectory X<br>**When:** running the documentation generator<br>**Then:** it should preserve the folder structure in output |
 
 ---
-*Generated on 2025-06-09T12:30:56.943Z*
+*Generated on 2025-06-09T13:03:00.306Z*

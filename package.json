@@ -1,7 +1,7 @@
 {
   "name": "markdown-test-docs-generator",
   "version": "1.0.0",
-  "description": "Markdown documentation generator for Jest test files",
+  "description": "Markdown documentation generator for Jest and Vitest test files",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "engines": {
@@ -27,6 +27,7 @@
     "markdown",
     "documentation",
     "jest",
+    "vitest",
     "tests"
   ],
   "author": "",

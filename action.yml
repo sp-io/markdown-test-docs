@@ -1,31 +1,53 @@
-name: "Markdown Test Documentation Generator"
-description: "Generates markdown documentation for Jest / Vitest test files with GitHub integration"
-author: "Szymon Paluchowski"
+name: 'Test Documentation Generator'
+description: 'Generate markdown documentation from TypeScript/Jest/Vitest or Python/pytest test files'
+author: 'Your Name'
+
 inputs:
   source:
-    description: "Directory containing the Jest test files"
-    required: true
-    default: "./src"
+    description: 'Source directory containing test files'
+    required: false
+    default: ''
   output:
-    description: "Directory to output the generated markdown files"
+    description: 'Output directory for generated documentation'
     required: false
-    default: "./doc-tests"
+    default: ''
   github-url:
-    description: "GitHub repository URL (e.g., 'https://github.com/username/repo')"
+    description: 'GitHub repository URL for source links'
     required: false
-    default: ""
+    default: ''
   github-branch:
-    description: "GitHub branch name"
+    description: 'GitHub branch name'
     required: false
-    default: "main"
+    default: 'main'
   repository-root:
-    description: "Repository root directory"
+    description: 'Repository root directory'
     required: false
-    default: "./"
+    default: ''
   verbose:
-    description: "Enable verbose logging (shows unknown tags and additional info)"
+    description: 'Enable verbose logging'
     required: false
-    default: "false"
+    default: 'false'
+  test-framework:
+    description: 'Test framework: "jest" for Jest, "vitest" for Vitest, "pytest" for Python/pytest, or "auto" for auto-detection'
+    required: false
+    default: 'auto'
+
+outputs:
+  success:
+    description: 'Whether the documentation generation was successful'
+  output-dir:
+    description: 'The directory where documentation was generated'
+  framework-detected:
+    description: 'The test framework that was detected/used'
+  total-files:
+    description: 'Total number of test files processed'
+  total-tests:
+    description: 'Total number of tests documented'
+
 runs:
-  using: "node20"
-  main: "dist/index.js"
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'book-open'
+  color: 'blue'

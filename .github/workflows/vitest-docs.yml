@@ -1,0 +1,62 @@
+name: Vitest Documentation Generator
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'src/**/*.test.ts'
+      - 'src/**/*.spec.ts'
+      - 'test/**/*.test.ts'
+      - 'test/**/*.spec.ts'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  generate-vitest-docs:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Generate Vitest Test Documentation
+      uses: ./
+      id: docs
+      with:
+        source: 'src/test'
+        output: 'docs/tests'
+        github-url: ${{ github.server_url }}/${{ github.repository }}
+        github-branch: ${{ github.ref_name }}
+        repository-root: '.'
+        test-framework: 'vitest'
+        verbose: 'true'
+    
+    - name: Show generation results
+      run: |
+        echo "Documentation generated: ${{ steps.docs.outputs.success }}"
+        echo "Output directory: ${{ steps.docs.outputs.output-dir }}"
+        echo "Framework detected: ${{ steps.docs.outputs.framework-detected }}"
+        echo "Files processed: ${{ steps.docs.outputs.total-files }}"
+        echo "Tests documented: ${{ steps.docs.outputs.total-tests }}"
+    
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: vitest-documentation
+        path: docs/tests/
+        retention-days: 30
+    
+    - name: Setup Pages (if deploying)
+      if: github.ref == 'refs/heads/main'
+      uses: actions/configure-pages@v4
+    
+    - name: Deploy to GitHub Pages (optional)
+      if: github.ref == 'refs/heads/main'
+      uses: actions/deploy-pages@v3
+      with:
+        artifact_name: vitest-documentation

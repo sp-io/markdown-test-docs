@@ -1,16 +1,103 @@
 # Markdown Test Documentation Generator
 
-Automatically generate markdown documentation from Jest / Vitest test files, creating a comprehensive test documentation system with GitHub integration.
+Automatically generate markdown documentation from Jest and Vitest test files, creating a comprehensive test documentation system with GitHub integration.
 
 ## Features
 
-- Extracts test descriptions and metadata from Jest/Vitest test files
+- Extracts test descriptions and metadata from Jest and Vitest test files
+- Supports all Jest/Vitest test functions: `it`, `test`, `describe`, `bench`
+- Handles test modifiers: `.skip`, `.only`, `.todo`, `.concurrent`, `.each()`
 - Generates individual markdown files for each test file
 - Creates a comprehensive index of all tests
 - Supports JSDoc-style annotations in test comments
 - Categorizes tests and extracts tags
 - Formats using Given/When/Then style for behavior-driven tests
 - **NEW**: GitHub repository integration with direct links to source code
+
+## Vitest Support
+
+Full compatibility with Vitest testing framework, including:
+
+### Supported Test Functions
+- `it()` and `test()` - Standard test cases
+- `describe()` - Test suites and grouping
+- `bench()` - Benchmark/performance tests (Vitest-specific)
+
+### Supported Modifiers
+- `.skip` - Skip tests during execution
+- `.only` - Run only specific tests  
+- `.todo` - Mark tests as todo/pending
+- `.concurrent` - Run tests in parallel
+- `.each([...])` - Parameterized tests with data sets
+
+### Example Vitest Test File
+```typescript
+import { describe, it, test, bench, expect } from 'vitest';
+
+describe('Vitest Features', () => {
+  /**
+   * @given a basic test case
+   * @when using Vitest syntax
+   * @then documentation should be generated
+   */
+  it('should work with standard it()', () => {
+    expect(true).toBe(true);
+  });
+
+  /**
+   * @given a skipped test
+   * @when marked with .skip modifier
+   * @then test should be documented but not executed
+   */
+  test.skip('should handle skipped tests', () => {
+    // This test will be skipped
+  });
+
+  /**
+   * @given concurrent execution requirement
+   * @when using .concurrent modifier
+   * @then test should run in parallel
+   */
+  it.concurrent('should run concurrently', async () => {
+    await someAsyncOperation();
+  });
+
+  /**
+   * @given parameterized test data
+   * @when using .each() with multiple values
+   * @then all combinations should be tested
+   */
+  test.each([
+    { input: 1, expected: 2 },
+    { input: 2, expected: 4 }
+  ])('should multiply $input by 2', ({ input, expected }) => {
+    expect(input * 2).toBe(expected);
+  });
+});
+
+describe('Benchmarks', () => {
+  /**
+   * @given a function to benchmark
+   * @when measuring performance
+   * @then execution time should be recorded
+   */
+  bench('array operations', () => {
+    const arr = Array.from({ length: 1000 }, (_, i) => i);
+    return arr.reduce((sum, val) => sum + val, 0);
+  });
+});
+```
+
+The documentation generator will correctly parse all these patterns and generate comprehensive markdown documentation.
+
+### Migration from Jest to Vitest
+
+If you're migrating from Jest to Vitest, the documentation generator requires no configuration changes:
+
+- All existing Jest test documentation will continue to work
+- Vitest-specific features like `bench()` will be automatically detected
+- Mixed codebases with both Jest and Vitest files are fully supported
+- File extensions `.test.ts` and `.spec.ts` work with both frameworks
 
 ## Example Output
 Test file: [./src/test/example.test.ts](./src/test/example.test.ts)
@@ -84,6 +171,45 @@ generator.generate().then(() => {
 });
 ```
 
+### GitHub Action
+
+Use in your workflow:
+
+```yaml
+name: Generate Test Documentation
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Generate Test Documentation
+      uses: your-username/markdown-test-docs-generator@v1
+      with:
+        source: 'src/test'
+        output: 'docs/tests'
+        github-url: ${{ github.server_url }}/${{ github.repository }}
+        github-branch: ${{ github.ref_name }}
+        repository-root: '.'
+        test-framework: 'vitest'  # or 'jest', 'pytest', 'auto'
+        verbose: 'true'
+```
+
+#### Action Inputs
+
+- `source`: Source directory containing test files
+- `output`: Output directory for documentation
+- `github-url`: GitHub repository URL for source links
+- `github-branch`: GitHub branch name (default: `main`)
+- `repository-root`: Repository root directory
+- `test-framework`: Test framework - `jest`, `vitest`, `pytest`, or `auto` (default: `auto`)
+- `verbose`: Enable verbose logging (default: `false`)
+
 ### Verbose Mode
 
 Enable verbose mode to get detailed logging information, including warnings about unknown JSDoc tags:
@@ -112,7 +238,7 @@ This helps identify:
 
 ### Supported Comment Format
 
-The generator extracts documentation from JSDoc-style comments before each test case:
+The generator extracts documentation from JSDoc-style comments before each test case and works with both Jest and Vitest syntax:
 
 ```typescript
 /**
@@ -125,6 +251,15 @@ The generator extracts documentation from JSDoc-style comments before each test 
  */
 it('should do something', () => {
   // Test implementation
+});
+
+// Also works with Vitest modifiers
+test.skip('should be skipped', () => {
+  // Skipped test
+});
+
+bench('performance test', () => {
+  // Benchmark code
 });
 ```
 

@@ -22,4 +22,4 @@
 | [L66](src/test/github-link.test.ts#L66) | Repository Root Configuration [@configuration] > should handle multiple conditions with @and clauses | **Test compound conditions with @and tags**<br>**Given:** a project with custom repository root<br>**When:** generating documentation<br>**Then:** documentation should be generated for all directories<br>**And:** multiple source directories<br>**And:** GitHub URL is provided<br>**And:** all links should use the correct base path<br>**And:** generated files should maintain proper structure |
 
 ---
-*Generated on 2025-06-09T12:30:56.946Z*
+*Generated on 2025-06-09T13:03:00.308Z*
