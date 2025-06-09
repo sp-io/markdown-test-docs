@@ -27247,7 +27247,7 @@ function requireCore () {
 var coreExports = requireCore();
 
 /**
- * Markdown documentation generator for Jest test files
+ * Markdown documentation generator for Jest and Vitest test files
  * Extracts test information from TypeScript test files and generates markdown documentation
  */
 class MarkdownDocsGenerator {
@@ -27346,7 +27346,14 @@ class MarkdownDocsGenerator {
     async processTestFile(filePath) {
         const content = fs.readFileSync(filePath, 'utf8');
         const relativePath = path.relative(this.testDir, filePath);
-        const fileName = path.basename(filePath, '.test.ts');
+        // Handle both .test.ts and .spec.ts files
+        let fileName = path.basename(filePath);
+        if (fileName.endsWith('.test.ts')) {
+            fileName = fileName.replace('.test.ts', '');
+        }
+        else if (fileName.endsWith('.spec.ts')) {
+            fileName = fileName.replace('.spec.ts', '');
+        }
         const tests = this.extractTests(content, filePath);
         if (this.verbose) {
             console.log(`   Found ${tests.length} tests in ${fileName}`);
@@ -27410,8 +27417,8 @@ class MarkdownDocsGenerator {
                 };
                 continue;
             }
-            // Extract test cases (it, test)
-            const testMatch = line.match(/(?:it|test)(?:\.each\([^)]*\))?\s*\(\s*['"`]([^'"`]+)['"`]/);
+            // Extract test cases (it, test, bench) including Vitest modifiers
+            const testMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*['"`]([^'"`]+)['"`]/);
             if (testMatch && currentDescribe) {
                 const testName = testMatch[1];
                 const fullTestName = `${currentDescribe.name} > ${testName}`;
@@ -27613,7 +27620,13 @@ class MarkdownDocsGenerator {
     generateMarkdownFiles() {
         for (const [relativePath, fileData] of this.documentation) {
             // Convert test file path to markdown path while preserving directory structure
-            const markdownRelativePath = relativePath.replace(/\.test\.ts$/, '.md');
+            let markdownRelativePath = relativePath;
+            if (markdownRelativePath.endsWith('.test.ts')) {
+                markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
+            }
+            else if (markdownRelativePath.endsWith('.spec.ts')) {
+                markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
+            }
             const markdownPath = path.join(this.docsDir, markdownRelativePath);
             // Ensure directory exists
             const markdownDir = path.dirname(markdownPath);
@@ -27719,7 +27732,13 @@ class MarkdownDocsGenerator {
         content += '|----------|------|------|-----------|-------------|\n';
         for (const test of allTests) {
             const category = this.escapeMarkdown(test.category);
-            const markdownRelativePath = test.filePath.replace(/\.test\.ts$/, '.md');
+            let markdownRelativePath = test.filePath;
+            if (markdownRelativePath.endsWith('.test.ts')) {
+                markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
+            }
+            else if (markdownRelativePath.endsWith('.spec.ts')) {
+                markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
+            }
             const fileName = `[${test.fileName}](${markdownRelativePath})`;
             const testName = this.escapeMarkdown(test.testName);
             const link = `[L${test.lineNumber}](${test.link})`;
@@ -27739,7 +27758,13 @@ class MarkdownDocsGenerator {
                 content += '| File | Link | Test Name |\n';
                 content += '|------|------|-----------|\n';
                 for (const test of testsWithTag) {
-                    const markdownRelativePath = test.filePath.replace(/\.test\.ts$/, '.md');
+                    let markdownRelativePath = test.filePath;
+                    if (markdownRelativePath.endsWith('.test.ts')) {
+                        markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
+                    }
+                    else if (markdownRelativePath.endsWith('.spec.ts')) {
+                        markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
+                    }
                     const fileName = `[${test.fileName}](${markdownRelativePath})`;
                     const testName = this.escapeMarkdown(test.testName);
                     const link = `[L${test.lineNumber}](${test.link})`;
@@ -27781,7 +27806,13 @@ class MarkdownDocsGenerator {
         const sortedFiles = Array.from(this.documentation.entries()).sort(([a], [b]) => a.localeCompare(b));
         for (const [relativePath, fileData] of sortedFiles) {
             const fileName = fileData.fileName;
-            const markdownRelativePath = relativePath.replace(/\.test\.ts$/, '.md');
+            let markdownRelativePath = relativePath;
+            if (markdownRelativePath.endsWith('.test.ts')) {
+                markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
+            }
+            else if (markdownRelativePath.endsWith('.spec.ts')) {
+                markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
+            }
             const testCount = fileData.summary.total;
             const categories = Object.keys(fileData.summary.categories).join(', ');
             const tags = fileData.summary.tags.join(', ');
@@ -27802,7 +27833,13 @@ class MarkdownDocsGenerator {
             const totalTests = files.reduce((sum, file) => sum + file.summary.total, 0);
             content += `**Files:** ${files.length} | **Tests:** ${totalTests}\n\n`;
             for (const file of files.sort((a, b) => a.fileName.localeCompare(b.fileName))) {
-                const markdownRelativePath = file.filePath.replace(/\.test\.ts$/, '.md');
+                let markdownRelativePath = file.filePath;
+                if (markdownRelativePath.endsWith('.test.ts')) {
+                    markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
+                }
+                else if (markdownRelativePath.endsWith('.spec.ts')) {
+                    markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
+                }
                 content += `- [${file.fileName}](${markdownRelativePath}) (${file.summary.total} tests)\n`;
             }
             content += '\n';

@@ -1,5 +1,4 @@
 import * as core from '@actions/core';
-import * as github from '@actions/github';
 import fs from 'fs';
 import path from 'path';
 import MarkdownDocsGenerator from './markdown-docs.js'; // TypeScript/Jest generator
@@ -216,10 +215,8 @@ async function main(): Promise<void> {
     }
 
     // Add GitHub context if not provided
-    if (!inputs.githubUrl && github.context.payload.repository) {
-      inputs.githubUrl = github.context.payload.repository.html_url;
-      console.log(`🔗 Using repository URL: ${inputs.githubUrl}`);
-    }
+    // Note: GitHub context would need @actions/github package
+    // For now, rely on manual github-url input
 
     console.log(`\n🚀 Running ${framework} documentation generator...`);
 

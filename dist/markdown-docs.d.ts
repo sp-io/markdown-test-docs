@@ -7,7 +7,7 @@ interface GeneratorOptions {
     verbose?: boolean;
 }
 /**
- * Markdown documentation generator for Jest test files
+ * Markdown documentation generator for Jest and Vitest test files
  * Extracts test information from TypeScript test files and generates markdown documentation
  */
 declare class MarkdownDocsGenerator {
