@@ -6,9 +6,9 @@
 
 ## Test Cases
 
-| Test Name | Link | Description |
-|-----------|------|-------------|
-| Sample test in X directory > should preserve folder structure | [L11](src/test/X/A.test.ts#L11) | **Given:** a test file in subdirectory X<br>**When:** running the documentation generator<br>**Then:** it should preserve the folder structure in output |
+| Link | Test Name | Description |
+|------|-----------|-------------|
+| [L11](src/test/X/A.test.ts#L11) | Sample test in X directory > should preserve folder structure | **Given:** a test file in subdirectory X<br>**When:** running the documentation generator<br>**Then:** it should preserve the folder structure in output |
 
 ---
-*Generated on 2025-06-09T07:21:24.091Z*
+*Generated on 2025-06-09T07:35:18.055Z*
