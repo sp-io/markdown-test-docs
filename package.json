@@ -19,7 +19,7 @@
     "build:lib": "tsc",
     "build:action": "tsc src/index.ts --outDir dist --target ES2019 --module CommonJS --esModuleInterop --declaration false",
     "bundle": "npx rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
-    "test": "jest",
+    "test": "jest --config jest.config.js",
     "lint": "eslint . --ext .js,.ts,.cjs",
     "lint:fix": "eslint . --ext .js,.ts,.cjs --fix"
   },
@@ -56,5 +56,13 @@
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "*"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "vitest-example.test.ts"
+    ]
   }
 }

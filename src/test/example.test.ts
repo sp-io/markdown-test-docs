@@ -2,7 +2,7 @@
  * Example test file to demonstrate documentation generation
  */
 
-import { MarkdownDocsGenerator } from '../main';
+import MarkdownDocsGenerator from '../markdown-docs';
 
 describe('MarkdownDocsGenerator', () => {
   /**
@@ -46,7 +46,7 @@ describe('MarkdownDocsGenerator', () => {
         sourceDir: './non-existent-directory',
       });
 
-      await expect(generator.generate()).rejects.toThrow('no such file or directory');
+      await expect(generator.generate()).rejects.toThrow('Source directory does not exist');
     } finally {
       // Restore console.error in a `finally` block to ensure it always gets restored
       console.error = originalConsoleError;

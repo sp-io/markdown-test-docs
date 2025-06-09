@@ -4,6 +4,10 @@ module.exports = {
   testMatch: [
     '**/?(*.)+(spec|test).ts'
   ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    'vitest-example.test.ts'
+  ],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: [
