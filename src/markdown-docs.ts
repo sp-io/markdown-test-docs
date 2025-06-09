@@ -324,14 +324,14 @@ class MarkdownDocsGenerator {
         commentLines = [];
       }
 
-      // Handle multiline test definitions
-      const testStartMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(/);
+      // Handle multiline test definitions and it.each patterns
+      const testStartMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)|each\s*\())/);
       if (testStartMatch && currentDescribe && !inDynamicTestBlock && !testMatch) {
-        // Look ahead for the test name on subsequent lines
+        // Look ahead for the test name on subsequent lines (up to 15 lines for complex each patterns)
         let testName = '';
         let foundLineNumber = lineNumber;
         
-        for (let j = i; j < Math.min(i + 5, lines.length); j++) {
+        for (let j = i; j < Math.min(i + 15, lines.length); j++) {
           const nameMatch = lines[j].match(/['"`]([^'"`]+)['"`]/);
           if (nameMatch) {
             testName = nameMatch[1];
@@ -347,6 +347,12 @@ class MarkdownDocsGenerator {
           // Generate link to the test
           const link = this.generateTestLink(filePath, foundLineNumber, currentDescribe.name, testName);
           
+          // Add "parameterized" tag for .each tests
+          const tags = this.extractTags(currentDescribe.name, description);
+          if (testStartMatch[0].includes('.each')) {
+            tags.push('parameterized');
+          }
+          
           tests.push({
             testName: fullTestName,
             shortName: testName,
@@ -354,7 +360,7 @@ class MarkdownDocsGenerator {
             link,
             description,
             lineNumber: foundLineNumber,
-            tags: this.extractTags(currentDescribe.name, description)
+            tags
           });
 
           // Reset comment lines after processing
