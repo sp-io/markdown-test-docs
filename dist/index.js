@@ -27267,7 +27267,7 @@ class MarkdownDocsGenerator {
         this.verbose = options.verbose || false;
         this.testFiles = [];
         this.documentation = new Map();
-        this.knownTags = new Set(['given', 'when', 'then', 'and']);
+        this.knownTags = new Set(['given', 'when', 'then', 'and', 'group', 'category']);
         console.log(`Source directory: ${this.testDir}`);
         console.log(`Output directory: ${this.docsDir}`);
         console.log(`Repository root: ${this.repositoryRoot}`);
@@ -27348,6 +27348,9 @@ class MarkdownDocsGenerator {
         const relativePath = path.relative(this.testDir, filePath);
         const fileName = path.basename(filePath, '.test.ts');
         const tests = this.extractTests(content, filePath);
+        if (this.verbose) {
+            console.log(`   Found ${tests.length} tests in ${fileName}`);
+        }
         if (tests.length > 0) {
             this.documentation.set(relativePath, {
                 fileName,
@@ -27356,6 +27359,9 @@ class MarkdownDocsGenerator {
                 tests,
                 summary: this.generateFileSummary(tests)
             });
+        }
+        else if (this.verbose) {
+            console.log(`   ⚠️  No tests extracted from ${fileName} - check test structure`);
         }
     }
     /**
@@ -27644,13 +27650,13 @@ class MarkdownDocsGenerator {
         }
         // Add test cases table
         content += '## Test Cases\n\n';
-        content += '| Test Name | Link | Description |\n';
-        content += '|-----------|------|-------------|\n';
+        content += '| Link | Test Name | Description |\n';
+        content += '|------|-----------|-------------|\n';
         for (const test of tests) {
             const testName = this.escapeMarkdown(test.testName);
             const link = `[L${test.lineNumber}](${test.link})`;
             const description = this.escapeMarkdown(test.description || 'No description available');
-            content += `| ${testName} | ${link} | ${description} |\n`;
+            content += `| ${link} | ${testName} | ${description} |\n`;
         }
         content += '\n---\n';
         content += `*Generated on ${new Date().toISOString()}*\n`;
@@ -27709,8 +27715,8 @@ class MarkdownDocsGenerator {
         content += '\n';
         // Add comprehensive test table
         content += '## All Test Cases\n\n';
-        content += '| Category | File | Test Name | Link | Description |\n';
-        content += '|----------|------|-----------|------|-------------|\n';
+        content += '| Category | File | Link | Test Name | Description |\n';
+        content += '|----------|------|------|-----------|-------------|\n';
         for (const test of allTests) {
             const category = this.escapeMarkdown(test.category);
             const markdownRelativePath = test.filePath.replace(/\.test\.ts$/, '.md');
@@ -27718,7 +27724,7 @@ class MarkdownDocsGenerator {
             const testName = this.escapeMarkdown(test.testName);
             const link = `[L${test.lineNumber}](${test.link})`;
             const description = this.escapeMarkdown(test.description || 'No description available');
-            content += `| ${category} | ${fileName} | ${testName} | ${link} | ${description} |\n`;
+            content += `| ${category} | ${fileName} | ${link} | ${testName} | ${description} |\n`;
         }
         // Add tag-based index
         const allTags = new Set();
@@ -27730,14 +27736,14 @@ class MarkdownDocsGenerator {
             for (const tag of Array.from(allTags).sort()) {
                 const testsWithTag = allTests.filter(test => test.tags.includes(tag));
                 content += `### ${tag} (${testsWithTag.length} tests)\n\n`;
-                content += '| File | Test Name | Link |\n';
-                content += '|------|-----------|------|\n';
+                content += '| File | Link | Test Name |\n';
+                content += '|------|------|-----------|\n';
                 for (const test of testsWithTag) {
                     const markdownRelativePath = test.filePath.replace(/\.test\.ts$/, '.md');
                     const fileName = `[${test.fileName}](${markdownRelativePath})`;
                     const testName = this.escapeMarkdown(test.testName);
                     const link = `[L${test.lineNumber}](${test.link})`;
-                    content += `| ${fileName} | ${testName} | ${link} |\n`;
+                    content += `| ${fileName} | ${link} | ${testName} |\n`;
                 }
                 content += '\n';
             }

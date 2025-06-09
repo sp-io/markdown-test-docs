@@ -86,7 +86,7 @@ class MarkdownDocsGenerator {
     this.verbose = options.verbose || false;
     this.testFiles = [];
     this.documentation = new Map<string, FileDocumentation>();
-    this.knownTags = new Set(['given', 'when', 'then', 'and']);
+    this.knownTags = new Set(['given', 'when', 'then', 'and', 'group', 'category']);
 
     console.log(`Source directory: ${this.testDir}`);
     console.log(`Output directory: ${this.docsDir}`);
@@ -186,6 +186,10 @@ class MarkdownDocsGenerator {
     
     const tests = this.extractTests(content, filePath);
     
+    if (this.verbose) {
+      console.log(`   Found ${tests.length} tests in ${fileName}`);
+    }
+    
     if (tests.length > 0) {
       this.documentation.set(relativePath, {
         fileName,
@@ -194,6 +198,8 @@ class MarkdownDocsGenerator {
         tests,
         summary: this.generateFileSummary(tests)
       });
+    } else if (this.verbose) {
+      console.log(`   ⚠️  No tests extracted from ${fileName} - check test structure`);
     }
   }
 
