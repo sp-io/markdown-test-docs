@@ -202,8 +202,8 @@ class PytestMarkdownGenerator {
       const currentIndentLevel = line.length - line.trimLeft().length;
 
       // Handle triple-quoted docstrings
-      if (!inDocstring && (trimmedLine.startsWith('"""') || trimmedLine.startsWith("'''"))) {
-        const quote = trimmedLine.startsWith('"""') ? '"""' : "'''";
+      if (!inDocstring && (trimmedLine.startsWith('"""') || trimmedLine.startsWith('\'\'\''))) {
+        const quote = trimmedLine.startsWith('"""') ? '"""' : '\'\'\'';
         inDocstring = true;
         docstringLines = [];
         docstringIndentLevel = currentIndentLevel;
@@ -226,7 +226,7 @@ class PytestMarkdownGenerator {
       }
 
       if (inDocstring) {
-        const quote = docstringLines.length === 0 && trimmedLine.includes('"""') ? '"""' : "'''";
+        const quote = docstringLines.length === 0 && trimmedLine.includes('"""') ? '"""' : '\'\'\'';
         if (trimmedLine.includes(quote)) {
           inDocstring = false;
           const docContent = trimmedLine.replace(quote, '').trim();
