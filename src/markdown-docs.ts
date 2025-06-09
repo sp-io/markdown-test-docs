@@ -324,6 +324,44 @@ class MarkdownDocsGenerator {
         commentLines = [];
       }
 
+      // Handle multiline test definitions
+      const testStartMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(/);
+      if (testStartMatch && currentDescribe && !inDynamicTestBlock && !testMatch) {
+        // Look ahead for the test name on subsequent lines
+        let testName = '';
+        let foundLineNumber = lineNumber;
+        
+        for (let j = i; j < Math.min(i + 5, lines.length); j++) {
+          const nameMatch = lines[j].match(/['"`]([^'"`]+)['"`]/);
+          if (nameMatch) {
+            testName = nameMatch[1];
+            foundLineNumber = j + 1;
+            break;
+          }
+        }
+        
+        if (testName) {
+          const fullTestName = `${currentDescribe.name} > ${testName}`;
+          const description = this.parseTestDescription(commentLines);
+          
+          // Generate link to the test
+          const link = this.generateTestLink(filePath, foundLineNumber, currentDescribe.name, testName);
+          
+          tests.push({
+            testName: fullTestName,
+            shortName: testName,
+            describeName: currentDescribe.name,
+            link,
+            description,
+            lineNumber: foundLineNumber,
+            tags: this.extractTags(currentDescribe.name, description)
+          });
+
+          // Reset comment lines after processing
+          commentLines = [];
+        }
+      }
+
       // Reset scope tracking when leaving blocks
       if (currentDescribe && braceLevel < currentDescribe.level) {
         currentDescribe = null;
