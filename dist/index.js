@@ -27381,6 +27381,8 @@ class MarkdownDocsGenerator {
         let inComment = false;
         let commentLines = [];
         let braceLevel = 0;
+        let inDynamicTestBlock = false;
+        let dynamicTestTemplate = '';
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             const lineNumber = i + 1;
@@ -27417,9 +27419,39 @@ class MarkdownDocsGenerator {
                 };
                 continue;
             }
-            // Extract test cases (it, test, bench) including Vitest modifiers
-            const testMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*['"`]([^'"`]+)['"`]/);
-            if (testMatch && currentDescribe) {
+            // Check for dynamic test patterns (forEach, map, etc.)
+            const dynamicTestMatch = line.match(/\.forEach\s*\(\s*\([^)]*\)\s*=>\s*\{/);
+            if (dynamicTestMatch && currentDescribe) {
+                inDynamicTestBlock = true;
+                // Look ahead to find the test template
+                for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+                    const testTemplateMatch = lines[j].match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*[`'"]([^`'"]*)[`'"]/);
+                    if (testTemplateMatch) {
+                        dynamicTestTemplate = testTemplateMatch[1];
+                        const description = commentLines.length > 0 ? this.parseTestDescription(commentLines) : 'Dynamic test generated from forEach loop';
+                        const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, dynamicTestTemplate);
+                        tests.push({
+                            testName: `${currentDescribe.name} > ${dynamicTestTemplate} (dynamic)`,
+                            shortName: `${dynamicTestTemplate} (dynamic)`,
+                            describeName: currentDescribe.name,
+                            link,
+                            description,
+                            lineNumber,
+                            tags: this.extractTags(currentDescribe.name, description).concat(['dynamic'])
+                        });
+                        if (this.verbose) {
+                            console.log(`   Found dynamic test pattern: ${dynamicTestTemplate}`);
+                        }
+                        break;
+                    }
+                }
+                // Reset comment lines after processing
+                commentLines = [];
+                continue;
+            }
+            // Extract regular test cases (it, test, bench) with template literal support
+            const testMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*[`'"]([^`'"]*)[`'"]/);
+            if (testMatch && currentDescribe && !inDynamicTestBlock) {
                 const testName = testMatch[1];
                 const fullTestName = `${currentDescribe.name} > ${testName}`;
                 const description = this.parseTestDescription(commentLines);
@@ -27440,6 +27472,7 @@ class MarkdownDocsGenerator {
             // Reset scope tracking when leaving blocks
             if (currentDescribe && braceLevel < currentDescribe.level) {
                 currentDescribe = null;
+                inDynamicTestBlock = false;
             }
         }
         return tests;
