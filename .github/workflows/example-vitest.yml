@@ -14,7 +14,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Generate Test Documentation
-      uses: ./
+      uses: sp-io/markdown-test-docs-action@v1
       with:
         source: 'src/test'
         output: 'docs/tests'

@@ -25,7 +25,7 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Generate Vitest Test Documentation
-      uses: ./
+      uses: sp-io/markdown-test-docs-action@v1
       id: docs
       with:
         source: 'src/test'

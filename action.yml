@@ -1,6 +1,6 @@
-name: 'Test Documentation Generator'
+name: 'markdown-test-docs-action'
 description: 'Generate markdown documentation from TypeScript/Jest/Vitest or Python/pytest test files'
-author: 'Your Name'
+author: 'Szymon Paluchowski'
 
 inputs:
   source:

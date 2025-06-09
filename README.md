@@ -189,7 +189,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Generate Test Documentation
-      uses: your-username/markdown-test-docs-generator@v1
+      uses: sp-io/markdown-test-docs-action@v1
       with:
         source: 'src/test'
         output: 'docs/tests'

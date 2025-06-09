@@ -30,7 +30,7 @@
     "vitest",
     "tests"
   ],
-  "author": "",
+  "author": "Szymon Paluchowski",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.11.1",
