@@ -27606,7 +27606,17 @@ class MarkdownDocsGenerator {
      */
     generateMarkdownFiles() {
         for (const [relativePath, fileData] of this.documentation) {
-            const markdownPath = path.join(this.docsDir, `${fileData.fileName}.md`);
+            // Convert test file path to markdown path while preserving directory structure
+            const markdownRelativePath = relativePath.replace(/\.test\.ts$/, '.md');
+            const markdownPath = path.join(this.docsDir, markdownRelativePath);
+            // Ensure directory exists
+            const markdownDir = path.dirname(markdownPath);
+            if (!fs.existsSync(markdownDir)) {
+                fs.mkdirSync(markdownDir, { recursive: true });
+                if (this.verbose) {
+                    console.log(`📁 Created directory: ${markdownDir}`);
+                }
+            }
             const content = this.generateMarkdownContent(fileData);
             fs.writeFileSync(markdownPath, content, 'utf8');
             console.log(`📝 Generated: ${markdownPath}`);
@@ -27703,7 +27713,8 @@ class MarkdownDocsGenerator {
         content += '|----------|------|-----------|------|-------------|\n';
         for (const test of allTests) {
             const category = this.escapeMarkdown(test.category);
-            const fileName = `[${test.fileName}](${test.fileName}.md)`;
+            const markdownRelativePath = test.filePath.replace(/\.test\.ts$/, '.md');
+            const fileName = `[${test.fileName}](${markdownRelativePath})`;
             const testName = this.escapeMarkdown(test.testName);
             const link = `[L${test.lineNumber}](${test.link})`;
             const description = this.escapeMarkdown(test.description || 'No description available');
@@ -27722,7 +27733,8 @@ class MarkdownDocsGenerator {
                 content += '| File | Test Name | Link |\n';
                 content += '|------|-----------|------|\n';
                 for (const test of testsWithTag) {
-                    const fileName = `[${test.fileName}](${test.fileName}.md)`;
+                    const markdownRelativePath = test.filePath.replace(/\.test\.ts$/, '.md');
+                    const fileName = `[${test.fileName}](${markdownRelativePath})`;
                     const testName = this.escapeMarkdown(test.testName);
                     const link = `[L${test.lineNumber}](${test.link})`;
                     content += `| ${fileName} | ${testName} | ${link} |\n`;
@@ -27763,11 +27775,11 @@ class MarkdownDocsGenerator {
         const sortedFiles = Array.from(this.documentation.entries()).sort(([a], [b]) => a.localeCompare(b));
         for (const [relativePath, fileData] of sortedFiles) {
             const fileName = fileData.fileName;
-            const markdownFile = `${fileName}.md`;
+            const markdownRelativePath = relativePath.replace(/\.test\.ts$/, '.md');
             const testCount = fileData.summary.total;
             const categories = Object.keys(fileData.summary.categories).join(', ');
             const tags = fileData.summary.tags.join(', ');
-            content += `| [${fileName}](${markdownFile}) | ${testCount} | ${categories} | ${tags} |\n`;
+            content += `| [${fileName}](${markdownRelativePath}) | ${testCount} | ${categories} | ${tags} |\n`;
         }
         // Add detailed breakdown by directory
         content += '\n## Directory Structure\n\n';
@@ -27784,7 +27796,8 @@ class MarkdownDocsGenerator {
             const totalTests = files.reduce((sum, file) => sum + file.summary.total, 0);
             content += `**Files:** ${files.length} | **Tests:** ${totalTests}\n\n`;
             for (const file of files.sort((a, b) => a.fileName.localeCompare(b.fileName))) {
-                content += `- [${file.fileName}](${file.fileName}.md) (${file.summary.total} tests)\n`;
+                const markdownRelativePath = file.filePath.replace(/\.test\.ts$/, '.md');
+                content += `- [${file.fileName}](${markdownRelativePath}) (${file.summary.total} tests)\n`;
             }
             content += '\n';
         }
