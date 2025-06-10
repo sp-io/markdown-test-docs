@@ -262,36 +262,39 @@ class PytestMarkdownGenerator {
         currentClass = null;
       }
 
-      // Extract test functions
-      const testMatch = trimmedLine.match(/^def\s+(test_\w+)\s*\([^)]*\):/);
-      if (testMatch) {
-        const testName = testMatch[1];
-        const className = currentClass?.name || 'Module Level Tests';
-        const fullTestName = currentClass ? `${className}::${testName}` : testName;
-        
-        // Look for decorators above the test function
-        const markers = this.extractMarkers(lines, i);
-        
-        const description = this.parseTestDescription(docstringLines);
-        const link = this.generateTestLink(filePath, lineNumber, className, testName);
-        
-        tests.push({
-          testName: fullTestName,
-          shortName: testName,
-          className,
-          link,
-          description,
-          lineNumber,
-          tags: this.extractTags(className, description, docstringLines),
-          markers
-        });
+      // Extract test functions - use matchAll to find ALL test functions
+      const testMatches = [...line.matchAll(/^def\s+(test_\w+)\s*\([^)]*\):/g)];
+      if (testMatches.length > 0) {
+        for (const testMatch of testMatches) {
+          const testName = testMatch[1];
+          const className = currentClass?.name || 'Module Level Tests';
+          const fullTestName = currentClass ? `${className}::${testName}` : testName;
+          
+          // Look for decorators above the test function
+          const markers = this.extractMarkers(lines, i);
+          
+          const description = this.parseTestDescription(docstringLines);
+          const link = this.generateTestLink(filePath, lineNumber, className, testName);
+          
+          tests.push({
+            testName: fullTestName,
+            shortName: testName,
+            className,
+            link,
+            description,
+            lineNumber,
+            tags: this.extractTags(className, description, docstringLines),
+            markers
+          });
+        }
 
         // Reset docstring after processing
         docstringLines = [];
       }
 
       // Clear docstring if we hit non-docstring, non-test code
-      if (trimmedLine && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('@') && !testMatch && !classMatch) {
+      if (trimmedLine && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('@') && 
+          !testMatches.length && !classMatch) {
         docstringLines = [];
       }
     }
