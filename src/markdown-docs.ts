@@ -16,6 +16,8 @@ interface DescribeBlock {
   level: number;
 }
 
+type TestType = 'regular' | 'skipped' | 'todo' | 'each' | 'only' | 'concurrent' | 'benchmark';
+
 interface TestCase {
   testName: string;
   shortName: string;
@@ -24,6 +26,7 @@ interface TestCase {
   description: string;
   lineNumber: number;
   tags: string[];
+  testType: TestType;
 }
 
 interface TestCaseWithFile extends TestCase {
@@ -40,10 +43,21 @@ interface TestDescription {
   and: string[];
 }
 
+interface TestTypeCounts {
+  regular: number;
+  skipped: number;
+  todo: number;
+  each: number;
+  only: number;
+  concurrent: number;
+  benchmark: number;
+}
+
 interface FileSummary {
   total: number;
   categories: Record<string, number>;
   tags: string[];
+  testTypes: TestTypeCounts;
 }
 
 interface FileDocumentation {
@@ -195,6 +209,8 @@ class MarkdownDocsGenerator {
     
     if (this.verbose) {
       console.log(`   Found ${tests.length} tests in ${fileName}`);
+      const typeCounts = this.countTestTypes(tests);
+      console.log(`   Test types: Regular: ${typeCounts.regular}, Skipped: ${typeCounts.skipped}, Todo: ${typeCounts.todo}, Each: ${typeCounts.each}, Only: ${typeCounts.only}, Concurrent: ${typeCounts.concurrent}, Benchmark: ${typeCounts.benchmark}`);
     }
     
     if (tests.length > 0) {
@@ -211,8 +227,54 @@ class MarkdownDocsGenerator {
   }
 
   /**
-   * Extract test information from file content
+   * Determine test type from line content
    */
+  private determineTestType(line: string): TestType {
+    if (line.includes('.skip')) return 'skipped';
+    if (line.includes('.todo')) return 'todo';
+    if (line.includes('.each')) return 'each';
+    if (line.includes('.only')) return 'only';
+    if (line.includes('.concurrent')) return 'concurrent';
+    if (line.match(/\bbench\s*\(/)) return 'benchmark';
+    return 'regular';
+  }
+
+  /**
+   * Count test types in a test array
+   */
+  private countTestTypes(tests: TestCase[]): TestTypeCounts {
+    const counts: TestTypeCounts = {
+      regular: 0,
+      skipped: 0,
+      todo: 0,
+      each: 0,
+      only: 0,
+      concurrent: 0,
+      benchmark: 0
+    };
+
+    tests.forEach(test => {
+      counts[test.testType]++;
+    });
+
+    return counts;
+  }
+
+  /**
+   * Get test type emoji for display
+   */
+  private getTestTypeEmoji(testType: TestType): string {
+    switch (testType) {
+      case 'regular': return '✅';
+      case 'skipped': return '⏭️';
+      case 'todo': return '📝';
+      case 'each': return '🔄';
+      case 'only': return '🎯';
+      case 'concurrent': return '⚡';
+      case 'benchmark': return '📊';
+      default: return '❓';
+    }
+  }
   private extractTests(content: string, filePath: string): TestCase[] {
     const tests: TestCase[] = [];
     const lines = content.split('\n');
@@ -284,7 +346,8 @@ class MarkdownDocsGenerator {
               link,
               description,
               lineNumber,
-              tags: this.extractTags(currentDescribe.name, description).concat(['dynamic'])
+              tags: this.extractTags(currentDescribe.name, description).concat(['dynamic']),
+              testType: 'each' // Dynamic tests are considered parametric
             });
             
             if (this.verbose) {
@@ -317,7 +380,8 @@ class MarkdownDocsGenerator {
           link,
           description,
           lineNumber,
-          tags: this.extractTags(currentDescribe.name, description)
+          tags: this.extractTags(currentDescribe.name, description),
+          testType: this.determineTestType(line)
         });
 
         // Reset comment lines after processing
@@ -360,7 +424,8 @@ class MarkdownDocsGenerator {
             link,
             description,
             lineNumber: foundLineNumber,
-            tags
+            tags,
+            testType: this.determineTestType(testStartMatch[0])
           });
 
           // Reset comment lines after processing
@@ -537,12 +602,13 @@ class MarkdownDocsGenerator {
   }
 
   /**
-   * Generate a summary for the file
+   * Generate a summary for the file including test type counts
    */
   private generateFileSummary(tests: TestCase[]): FileSummary {
     const total = tests.length;
     const categories: Record<string, number> = {};
     const tags = new Set<string>();
+    const testTypes = this.countTestTypes(tests);
 
     tests.forEach(test => {
       // Categorize by describe name
@@ -556,7 +622,8 @@ class MarkdownDocsGenerator {
     return {
       total,
       categories,
-      tags: Array.from(tags)
+      tags: Array.from(tags),
+      testTypes
     };
   }
 
@@ -591,7 +658,7 @@ class MarkdownDocsGenerator {
   }
 
   /**
-   * Generate markdown content for a single file
+   * Generate enhanced markdown content for a single file
    */
   private generateMarkdownContent(fileData: FileDocumentation): string {
     const { fileName, filePath, tests, summary } = fileData;
@@ -599,6 +666,43 @@ class MarkdownDocsGenerator {
     let content = `# ${fileName} Test Documentation\n\n`;
     content += `**File:** \`${filePath}\`\n\n`;
     content += `**Total Tests:** ${summary.total}\n\n`;
+    
+    // Add test type summary
+    content += '## Test Type Summary\n\n';
+    content += '| Type | Count | Percentage |\n';
+    content += '|------|--------|------------|\n';
+    
+    const testTypeOrder: TestType[] = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+    
+    for (const testType of testTypeOrder) {
+      const count = summary.testTypes[testType];
+      if (count > 0) {
+        const percentage = ((count / summary.total) * 100).toFixed(1);
+        const emoji = this.getTestTypeEmoji(testType);
+        const typeLabel = testType.charAt(0).toUpperCase() + testType.slice(1);
+        content += `| ${emoji} ${typeLabel} | ${count} | ${percentage}% |\n`;
+      }
+    }
+    content += '\n';
+
+    // Add warnings for potentially problematic test types
+    const warnings: string[] = [];
+    if (summary.testTypes.skipped > summary.total * 0.2) {
+      warnings.push(`⚠️ **High number of skipped tests (${summary.testTypes.skipped}/${summary.total})** - Consider reviewing or removing these tests`);
+    }
+    if (summary.testTypes.only > 0) {
+      warnings.push(`🚨 **Tests marked with .only found (${summary.testTypes.only})** - These should not be committed to version control`);
+    }
+    if (summary.testTypes.todo > summary.total * 0.3) {
+      warnings.push(`📝 **Many TODO tests (${summary.testTypes.todo}/${summary.total})** - Consider implementing these tests`);
+    }
+
+    if (warnings.length > 0) {
+      content += '## ⚠️ Warnings\n\n';
+      warnings.forEach(warning => {
+        content += `${warning}\n\n`;
+      });
+    }
     
     // Add tags if any
     if (summary.tags.length > 0) {
@@ -614,17 +718,18 @@ class MarkdownDocsGenerator {
       content += '\n';
     }
 
-    // Add test cases table
+    // Add test cases table with type indicators
     content += '## Test Cases\n\n';
-    content += '| Link | Test Name | Description |\n';
-    content += '|------|-----------|-------------|\n';
+    content += '| Type | Link | Test Name | Description |\n';
+    content += '|------|------|-----------|-------------|\n';
     
     for (const test of tests) {
+      const typeEmoji = this.getTestTypeEmoji(test.testType);
       const testName = this.escapeMarkdown(test.testName);
       const link = `[L${test.lineNumber}](${test.link})`;
       const description = this.escapeMarkdown(test.description || 'No description available');
       
-      content += `| ${link} | ${testName} | ${description} |\n`;
+      content += `| ${typeEmoji} | ${link} | ${testName} | ${description} |\n`;
     }
 
     content += '\n---\n';

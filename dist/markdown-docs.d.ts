@@ -41,8 +41,17 @@ declare class MarkdownDocsGenerator {
      */
     private processTestFile;
     /**
-     * Extract test information from file content
+     * Determine test type from line content
      */
+    private determineTestType;
+    /**
+     * Count test types in a test array
+     */
+    private countTestTypes;
+    /**
+     * Get test type emoji for display
+     */
+    private getTestTypeEmoji;
     private extractTests;
     /**
      * Parse test description from TSDoc comments
@@ -61,7 +70,7 @@ declare class MarkdownDocsGenerator {
      */
     private generateTestLink;
     /**
-     * Generate a summary for the file
+     * Generate a summary for the file including test type counts
      */
     private generateFileSummary;
     /**
@@ -69,7 +78,7 @@ declare class MarkdownDocsGenerator {
      */
     private generateMarkdownFiles;
     /**
-     * Generate markdown content for a single file
+     * Generate enhanced markdown content for a single file
      */
     private generateMarkdownContent;
     /**
