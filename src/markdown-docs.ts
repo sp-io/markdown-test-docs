@@ -363,8 +363,26 @@ class MarkdownDocsGenerator {
         continue;
       }
 
-      // Extract regular test cases (it, test, bench) with template literal support
-      const testMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*[`'"]([^`'"]*)[`'"]/);
+      // Extract regular test cases (it, test, bench) with enhanced pattern matching
+      let testMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*[`'"]([^`'"]*)[`'"]/);
+      
+      // Also try to match template literals and dynamic test names
+      if (!testMatch) {
+        testMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*`([^`]*)`/);
+      }
+      
+      // Handle test calls that span multiple lines - look for test name in subsequent lines
+      if (!testMatch && line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)))?\s*\(\s*$/)) {
+        // Look ahead for the test name on the next few lines
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          const nameMatch = lines[j].match(/^\s*[`'"]([^`'"]+)[`'"]/);
+          if (nameMatch) {
+            testMatch = [line + lines[j], nameMatch[1]];
+            break;
+          }
+        }
+      }
+      
       if (testMatch && currentDescribe && !inDynamicTestBlock) {
         const testName = testMatch[1];
         const fullTestName = `${currentDescribe.name} > ${testName}`;
@@ -381,7 +399,7 @@ class MarkdownDocsGenerator {
           description,
           lineNumber,
           tags: this.extractTags(currentDescribe.name, description),
-          testType: this.determineTestType(line)
+          testType: this.determineTestType(Array.isArray(testMatch) ? testMatch[0] : line)
         });
 
         // Reset comment lines after processing
@@ -389,14 +407,14 @@ class MarkdownDocsGenerator {
       }
 
       // Handle multiline test definitions and it.each patterns
-      const testStartMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)|each\s*\())/);
+      const testStartMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent|each\([^)]*\)|each\s*\(|skip|only|todo|concurrent))/);
       if (testStartMatch && currentDescribe && !inDynamicTestBlock && !testMatch) {
         // Look ahead for the test name on subsequent lines (up to 15 lines for complex each patterns)
         let testName = '';
         let foundLineNumber = lineNumber;
         
         for (let j = i; j < Math.min(i + 15, lines.length); j++) {
-          const nameMatch = lines[j].match(/['"`]([^'"`]+)['"`]/);
+          const nameMatch = lines[j].match(/[`'"]([^`'"]+)[`'"]/);
           if (nameMatch) {
             testName = nameMatch[1];
             foundLineNumber = j + 1;
@@ -431,6 +449,39 @@ class MarkdownDocsGenerator {
           // Reset comment lines after processing
           commentLines = [];
         }
+      }
+
+      // Handle simple test calls without JSDoc comments but with inline tags (like @smoke, @healthcheck)
+      const simpleTestMatch = line.match(/(?:it|test|bench)(?:\.(?:skip|only|todo|concurrent))?\s*\(\s*[`'"]([^`'"]*@[^`'"]*)[`'"]/);
+      if (simpleTestMatch && currentDescribe && !inDynamicTestBlock && !testMatch) {
+        const testName = simpleTestMatch[1];
+        const fullTestName = `${currentDescribe.name} > ${testName}`;
+        
+        // Extract inline tags from test name
+        const inlineTags = this.extractInlineTags(testName);
+        const cleanTestName = testName.replace(/@\w+/g, '').trim();
+        
+        // Use previous comment if available, or create basic description
+        const description = commentLines.length > 0 ? this.parseTestDescription(commentLines) : 'Test with inline tags';
+        
+        // Generate link to the test
+        const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, cleanTestName);
+        
+        const allTags = this.extractTags(currentDescribe.name, description).concat(inlineTags);
+        
+        tests.push({
+          testName: `${currentDescribe.name} > ${cleanTestName}`,
+          shortName: cleanTestName,
+          describeName: currentDescribe.name,
+          link,
+          description,
+          lineNumber,
+          tags: allTags,
+          testType: this.determineTestType(line)
+        });
+
+        // Reset comment lines after processing
+        commentLines = [];
       }
 
       // Reset scope tracking when leaving blocks
@@ -557,6 +608,14 @@ class MarkdownDocsGenerator {
     } else {
       sections[currentSection] = text;
     }
+  }
+
+  /**
+   * Extract inline tags from test names (e.g., @smoke, @healthcheck)
+   */
+  private extractInlineTags(testName: string): string[] {
+    const tagMatches = testName.match(/@(\w+)/g);
+    return tagMatches ? tagMatches.map(tag => tag.slice(1)) : [];
   }
 
   /**
