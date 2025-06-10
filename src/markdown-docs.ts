@@ -265,14 +265,14 @@ class MarkdownDocsGenerator {
    */
   private getTestTypeEmoji(testType: TestType): string {
     switch (testType) {
-      case 'regular': return '✅';
-      case 'skipped': return '⏭️';
-      case 'todo': return '📝';
-      case 'each': return '🔄';
-      case 'only': return '🎯';
-      case 'concurrent': return '⚡';
-      case 'benchmark': return '📊';
-      default: return '❓';
+    case 'regular': return '✅';
+    case 'skipped': return '⏭️';
+    case 'todo': return '📝';
+    case 'each': return '🔄';
+    case 'only': return '🎯';
+    case 'concurrent': return '⚡';
+    case 'benchmark': return '📊';
+    default: return '❓';
     }
   }
   private extractTests(content: string, filePath: string): TestCase[] {
