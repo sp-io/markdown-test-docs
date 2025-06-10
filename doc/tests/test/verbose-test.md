@@ -27,4 +27,4 @@
 | ✅ | [L63](https://github.com/username/tsdoc-test-docs/blob/main/src/test/verbose-test.test.ts#L63) | Error Scenarios [@errors] > should handle errors with unknown documentation tags | **Test error handling with documentation tags**<br>**Given:** an error-prone operation<br>**When:** an error occurs<br>**Then:** error should be handled gracefully<br>**And:** proper cleanup should occur |
 
 ---
-*Generated on 2025-06-10T12:38:10.212Z*
+*Generated on 2025-06-10T12:40:54.021Z*

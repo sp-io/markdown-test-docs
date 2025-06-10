@@ -28,4 +28,4 @@
 | ✅ | [L60](https://github.com/username/tsdoc-test-docs/blob/main/src/test/01_uiVerifications.spec.ts#L60) | Form Validations > should validate email format | **Test email format validation**<br>**Given:** an email input field<br>**When:** entering invalid email format<br>**Then:** email validation error should be shown |
 
 ---
-*Generated on 2025-06-10T12:38:10.209Z*
+*Generated on 2025-06-10T12:40:54.019Z*

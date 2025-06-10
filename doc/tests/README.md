@@ -52,5 +52,5 @@ This directory contains automatically generated documentation for all test files
 
 
 ---
-*Generated on 2025-06-10T12:38:10.222Z*
+*Generated on 2025-06-10T12:40:54.030Z*
 *Generator: markdown-docs.ts*

@@ -21,7 +21,8 @@
     "bundle": "npx rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
     "test": "jest --config jest.config.js",
     "lint": "eslint . --ext .js,.ts,.cjs",
-    "lint:fix": "eslint . --ext .js,.ts,.cjs --fix"
+    "lint:fix": "eslint . --ext .js,.ts,.cjs --fix",
+    "prerelease": "npm run lint:fix && npm run test && npm run start:github && npm run build"
   },
   "keywords": [
     "markdown",

@@ -39,4 +39,4 @@
 | 📊 | [L74](https://github.com/username/tsdoc-test-docs/blob/main/src/test/vitest-example.test.ts#L74) | Vitest Benchmarks > should handle benchmark tests | **Given:** a function to benchmark<br>**When:** measuring performance<br>**Then:** execution time should be recorded |
 
 ---
-*Generated on 2025-06-10T12:38:10.213Z*
+*Generated on 2025-06-10T12:40:54.021Z*
