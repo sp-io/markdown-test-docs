@@ -557,7 +557,6 @@ class PytestMarkdownGenerator {
     }
 
     content += '\n---\n';
-    content += `*Generated on ${new Date().toISOString()}*\n`;
 
     return content;
   }
@@ -664,7 +663,6 @@ class PytestMarkdownGenerator {
     }
 
     content += '\n---\n';
-    content += `*Generated on ${new Date().toISOString()}*\n`;
     content += '*Generator: pytest-markdown-generator*\n';
 
     fs.writeFileSync(allTestsPath, content, 'utf8');
@@ -735,7 +733,6 @@ class PytestMarkdownGenerator {
     }
 
     content += '\n---\n';
-    content += `*Generated on ${new Date().toISOString()}*\n`;
     content += '*Generator: pytest-markdown-generator*\n';
 
     fs.writeFileSync(indexPath, content, 'utf8');

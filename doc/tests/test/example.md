@@ -27,4 +27,3 @@
 | ✅ | [L65](https://github.com/username/tsdoc-test-docs/blob/main/src/test/example.test.ts#L65) | Documentation Generation [@advanced] > should parse complex test structures | **Advanced feature test**<br>**Given:** a test file with complex structure<br>**When:** the documentation is generated<br>**Then:** it should correctly parse all test cases<br>**And:** a MarkdownDocsGenerator configured to parse it |
 
 ---
-*Generated on 2025-06-10T12:40:54.021Z*

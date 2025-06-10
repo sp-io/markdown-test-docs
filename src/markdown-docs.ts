@@ -282,6 +282,7 @@ class MarkdownDocsGenerator {
     let currentDescribe: DescribeBlock | null = null;
     let inComment = false;
     let commentLines: string[] = [];
+    let commentEndLineNumber = -1;
     let braceLevel = 0;
     let inDynamicTestBlock = false;
     let dynamicTestTemplate = '';
@@ -304,6 +305,7 @@ class MarkdownDocsGenerator {
       if (inComment) {
         if (line.includes('*/')) {
           inComment = false;
+          commentEndLineNumber = lineNumber;
         } else {
           // Clean up comment line
           const cleanLine = line.replace(/^\s*\*\s?/, '').trim();
@@ -322,6 +324,10 @@ class MarkdownDocsGenerator {
           lineNumber,
           level: braceLevel
         };
+        // Reset comment lines when entering a new describe block to prevent
+        // describe-level comments from being applied to tests
+        commentLines = [];
+        commentEndLineNumber = -1;
         continue;
       }
 
@@ -336,7 +342,9 @@ class MarkdownDocsGenerator {
           if (testTemplateMatch) {
             dynamicTestTemplate = testTemplateMatch[1];
             
-            const description = commentLines.length > 0 ? this.parseTestDescription(commentLines) : 'Dynamic test generated from forEach loop';
+            const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber) 
+              ? this.parseTestDescription(commentLines) 
+              : 'Dynamic test generated from forEach loop';
             const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, dynamicTestTemplate);
             
             tests.push({
@@ -360,6 +368,7 @@ class MarkdownDocsGenerator {
         
         // Reset comment lines after processing
         commentLines = [];
+        commentEndLineNumber = -1;
         continue;
       }
 
@@ -386,7 +395,9 @@ class MarkdownDocsGenerator {
       if (testMatch && currentDescribe && !inDynamicTestBlock) {
         const testName = testMatch[1];
         const fullTestName = `${currentDescribe.name} > ${testName}`;
-        const description = this.parseTestDescription(commentLines);
+        const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber) 
+          ? this.parseTestDescription(commentLines) 
+          : '';
         
         // Generate link to the test
         const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, testName);
@@ -404,6 +415,7 @@ class MarkdownDocsGenerator {
 
         // Reset comment lines after processing
         commentLines = [];
+        commentEndLineNumber = -1;
       }
 
       // Handle multiline test definitions and it.each patterns
@@ -424,7 +436,9 @@ class MarkdownDocsGenerator {
         
         if (testName) {
           const fullTestName = `${currentDescribe.name} > ${testName}`;
-          const description = this.parseTestDescription(commentLines);
+          const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber) 
+            ? this.parseTestDescription(commentLines) 
+            : '';
           
           // Generate link to the test
           const link = this.generateTestLink(filePath, foundLineNumber, currentDescribe.name, testName);
@@ -448,6 +462,7 @@ class MarkdownDocsGenerator {
 
           // Reset comment lines after processing
           commentLines = [];
+          commentEndLineNumber = -1;
         }
       }
 
@@ -461,8 +476,10 @@ class MarkdownDocsGenerator {
         const inlineTags = this.extractInlineTags(testName);
         const cleanTestName = testName.replace(/@\w+/g, '').trim();
         
-        // Use previous comment if available, or create basic description
-        const description = commentLines.length > 0 ? this.parseTestDescription(commentLines) : 'Test with inline tags';
+        // Use previous comment if available and relevant, or create basic description
+        const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber) 
+          ? this.parseTestDescription(commentLines) 
+          : 'Test with inline tags';
         
         // Generate link to the test
         const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, cleanTestName);
@@ -482,6 +499,7 @@ class MarkdownDocsGenerator {
 
         // Reset comment lines after processing
         commentLines = [];
+        commentEndLineNumber = -1;
       }
 
       // Reset scope tracking when leaving blocks
@@ -608,6 +626,20 @@ class MarkdownDocsGenerator {
     } else {
       sections[currentSection] = text;
     }
+  }
+
+  /**
+   * Check if the comment is relevant to the current test
+   * Comments should be within 3 lines of the test declaration to be considered relevant
+   */
+  private isCommentRelevantToTest(commentLines: string[], commentEndLineNumber: number, testLineNumber: number): boolean {
+    if (commentLines.length === 0 || commentEndLineNumber === -1) {
+      return false;
+    }
+    
+    // Comment should be within 3 lines of the test (allowing for some whitespace)
+    const distance = testLineNumber - commentEndLineNumber;
+    return distance >= 0 && distance <= 3;
   }
 
   /**
@@ -792,7 +824,6 @@ class MarkdownDocsGenerator {
     }
 
     content += '\n---\n';
-    content += `*Generated on ${new Date().toISOString()}*\n`;
 
     return content;
   }
@@ -910,7 +941,6 @@ class MarkdownDocsGenerator {
     }
 
     content += '\n---\n';
-    content += `*Generated on ${new Date().toISOString()}*\n`;
     content += '*Generator: markdown-docs.ts*\n';
 
     fs.writeFileSync(allTestsPath, content, 'utf8');
@@ -993,7 +1023,6 @@ class MarkdownDocsGenerator {
     }
 
     content += '\n---\n';
-    content += `*Generated on ${new Date().toISOString()}*\n`;
     content += '*Generator: markdown-docs.ts*\n';
 
     fs.writeFileSync(indexPath, content, 'utf8');

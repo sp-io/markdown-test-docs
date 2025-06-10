@@ -40,4 +40,3 @@
 | 📊 | [L72](https://github.com/username/tsdoc-test-docs/blob/main/src/test/enhanced-demo.test.ts#L72) | Performance Tests > should benchmark array operations | **Given:** a function to benchmark<br>**When:** measuring performance<br>**Then:** execution time should be recorded |
 
 ---
-*Generated on 2025-06-10T12:40:54.021Z*

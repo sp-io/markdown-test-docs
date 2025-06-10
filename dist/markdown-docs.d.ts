@@ -62,6 +62,15 @@ declare class MarkdownDocsGenerator {
      */
     private saveSectionText;
     /**
+     * Check if the comment is relevant to the current test
+     * Comments should be within 3 lines of the test declaration to be considered relevant
+     */
+    private isCommentRelevantToTest;
+    /**
+     * Extract inline tags from test names (e.g., @smoke, @healthcheck)
+     */
+    private extractInlineTags;
+    /**
      * Extract tags from test name and description
      */
     private extractTags;
