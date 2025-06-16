@@ -2,8 +2,8 @@
 
 This directory contains automatically generated documentation for all test files.
 
-**Total Files:** 10
-**Total Tests:** 45
+**Total Files:** 11
+**Total Tests:** 48
 
 ## Quick Navigation
 
@@ -19,6 +19,7 @@ This directory contains automatically generated documentation for all test files
 | [enhanced-demo](test/enhanced-demo.md) | 7 | ✅1 ⏭️1 📝1 🔄1 🎯1 ⚡1 📊1 | Enhanced Test Type Demo, Performance Tests | parameterized, negative-test |
 | [example](test/example.md) | 4 | ✅4 | MarkdownDocsGenerator, Documentation Generation [@advanced] | error-case, advanced |
 | [github-link](test/github-link.md) | 5 | ✅5 | GitHub Link Generation, Repository Root Configuration [@configuration] | configuration |
+| [docstring_fixes](test/test_docstring_fixes.py) | 3 | ✅2 🔢1 | test_docstring_fixes | negative-test, parametrize |
 | [example_pytest](test/test_example_pytest.py) | 5 | ✅1 🏷️3 🔢1 | TestSmoke, test_example_pytest | ariadne, substrate, test_key, skip_blockchain, active_flow, parametrize |
 | [verbose-test](test/verbose-test.md) | 4 | ✅4 | Verbose Mode Testing [@testing], Error Scenarios [@errors] | testing, errors, error-case |
 | [vitest-example](test/vitest-example.md) | 7 | ✅2 ⏭️1 🔄1 🎯1 ⚡1 📊1 | Vitest Compatibility Tests, Vitest Benchmarks | parameterized |
@@ -29,10 +30,11 @@ This directory contains automatically generated documentation for all test files
 
 ### test
 
-**Files:** 8 | **Tests:** 43
+**Files:** 9 | **Tests:** 46
 
 - [01_uiVerifications](test/01_uiVerifications.md) (5 tests)
 - [and-tag-examples](test/and-tag-examples.md) (6 tests)
+- [docstring_fixes](test/test_docstring_fixes.py) (3 tests)
 - [enhanced-demo](test/enhanced-demo.md) (7 tests)
 - [example](test/example.md) (4 tests)
 - [example_pytest](test/test_example_pytest.py) (5 tests)

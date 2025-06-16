@@ -27444,6 +27444,14 @@ class LinkGenerator {
         else if (markdownRelativePath.endsWith('.spec.ts')) {
             markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
         }
+        else if (markdownRelativePath.startsWith('test_') && markdownRelativePath.endsWith('.py')) {
+            // Handle pytest files: test_example.py -> test_example.md
+            markdownRelativePath = markdownRelativePath.replace(/\.py$/, '.md');
+        }
+        else if (markdownRelativePath.endsWith('_test.py')) {
+            // Handle pytest files: example_test.py -> example_test.md
+            markdownRelativePath = markdownRelativePath.replace(/\.py$/, '.md');
+        }
         return markdownRelativePath;
     }
     /**
@@ -27997,7 +28005,12 @@ class PytestExtractor {
                             break;
                         }
                         else {
-                            // Multi-line docstring
+                            // Multi-line docstring - include any content after the opening quotes
+                            const firstLineContent = nextLine.substring(3).trim();
+                            if (firstLineContent) {
+                                functionDocstring.push(firstLineContent);
+                            }
+                            // Continue reading the rest of the docstring
                             for (let k = j + 1; k < lines.length; k++) {
                                 const docLine = lines[k].trim();
                                 if (docLine.includes(quoteType)) {

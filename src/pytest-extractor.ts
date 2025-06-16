@@ -125,7 +125,13 @@ export class PytestExtractor {
               }
               break;
             } else {
-              // Multi-line docstring
+              // Multi-line docstring - include any content after the opening quotes
+              const firstLineContent = nextLine.substring(3).trim();
+              if (firstLineContent) {
+                functionDocstring.push(firstLineContent);
+              }
+              
+              // Continue reading the rest of the docstring
               for (let k = j + 1; k < lines.length; k++) {
                 const docLine = lines[k].trim();
                 if (docLine.includes(quoteType)) {
