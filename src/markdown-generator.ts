@@ -73,9 +73,9 @@ export class MarkdownGenerator {
     
     for (const test of tests) {
       const typeEmoji = this.getTestTypeEmoji(test.testType);
-      const testName = this.escapeMarkdown(test.testName);
+      const testName = this.escapeMarkdownForTable(test.testName);
       const link = `[L${test.lineNumber}](${test.link})`;
-      const description = this.escapeMarkdown(test.description || 'No description available');
+      const description = this.escapeMarkdownForTable(test.description || 'No description available');
       
       content += `| ${typeEmoji} | ${link} | ${testName} | ${description} |\n`;
     }
@@ -191,12 +191,12 @@ export class MarkdownGenerator {
     content += '|----------|------|------|-----------|-------------|\n';
     
     for (const test of allTests) {
-      const category = this.escapeMarkdown(test.category);
+      const category = this.escapeMarkdownForTable(test.category);
       const markdownRelativePath = this.linkGenerator.getMarkdownPath(test.filePath);
       const fileName = `[${test.fileName}](${markdownRelativePath})`;
-      const testName = this.escapeMarkdown(test.testName);
+      const testName = this.escapeMarkdownForTable(test.testName);
       const link = `[L${test.lineNumber}](${test.link})`;
-      const description = this.escapeMarkdown(test.description || 'No description available');
+      const description = this.escapeMarkdownForTable(test.description || 'No description available');
       
       content += `| ${category} | ${fileName} | ${link} | ${testName} | ${description} |\n`;
     }
@@ -220,7 +220,7 @@ export class MarkdownGenerator {
         for (const test of testsWithTag) {
           const markdownRelativePath = this.linkGenerator.getMarkdownPath(test.filePath);
           const fileName = `[${test.fileName}](${markdownRelativePath})`;
-          const testName = this.escapeMarkdown(test.testName);
+          const testName = this.escapeMarkdownForTable(test.testName);
           const link = `[L${test.lineNumber}](${test.link})`;
           
           content += `| ${fileName} | ${link} | ${testName} |\n`;
@@ -324,6 +324,16 @@ export class MarkdownGenerator {
     case 'parametrize': return '🔢';
     default: return '❓';
     }
+  }
+
+  /**
+   * Escape markdown special characters for table cells - preserves line breaks as <br>
+   */
+  private escapeMarkdownForTable(text: string): string {
+    return text
+      .replace(/\|/g, '\\|')
+      .replace(/\n/g, '<br>')
+      .trim();
   }
 
   /**

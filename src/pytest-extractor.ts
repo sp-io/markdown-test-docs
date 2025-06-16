@@ -165,9 +165,15 @@ export class PytestExtractor {
         // Extract tags from markers and description
         const tags = [...currentMarkers, ...this.tagProcessor.extractTags(describeName, description)];
         
+        // Format test names: remove "test_" prefix and replace underscores with spaces
+        const formattedTestName = this.formatTestName(testName);
+        const formattedFullTestName = currentClass 
+          ? `${currentClass}::${formattedTestName}` 
+          : formattedTestName;
+        
         tests.push({
-          testName: fullTestName,
-          shortName: testName,
+          testName: formattedFullTestName,
+          shortName: formattedTestName,
           describeName,
           link,
           description,
@@ -178,7 +184,7 @@ export class PytestExtractor {
         });
 
         if (this.verbose) {
-          console.log(`   Found test: ${fullTestName} with markers: [${currentMarkers.join(', ')}]`);
+          console.log(`   Found test: ${formattedFullTestName} with markers: [${currentMarkers.join(', ')}]`);
         }
 
         // Reset markers and docstring after processing
@@ -194,6 +200,23 @@ export class PytestExtractor {
     }
 
     return tests;
+  }
+
+  /**
+   * Format test name: remove "test_" prefix and replace underscores with spaces
+   */
+  private formatTestName(testName: string): string {
+    let formatted = testName;
+    
+    // Remove "test_" prefix if present
+    if (formatted.startsWith('test_')) {
+      formatted = formatted.substring(5);
+    }
+    
+    // Replace underscores with spaces
+    formatted = formatted.replace(/_/g, ' ');
+    
+    return formatted;
   }
 
   /**
@@ -224,7 +247,7 @@ export class PytestExtractor {
   }
 
   /**
-   * Parse docstring content for test description and steps
+   * Parse docstring content for test description and steps - preserving original line breaks
    */
   private parseTestDescription(docstringLines: string[]): string {
     if (docstringLines.length === 0) {
@@ -241,11 +264,18 @@ export class PytestExtractor {
     };
 
     let currentSection = 'description';
+    const descriptionLines: string[] = [];
     
     for (const line of docstringLines) {
       const trimmed = line.trim();
       
-      if (!trimmed) continue;
+      if (!trimmed) {
+        // Preserve empty lines in description
+        if (currentSection === 'description') {
+          descriptionLines.push('');
+        }
+        continue;
+      }
 
       // Check for bullet points (steps)
       if (trimmed.startsWith('* ')) {
@@ -276,12 +306,12 @@ export class PytestExtractor {
 
       // Add to current section
       if (currentSection === 'description') {
-        parsed.description.push(trimmed);
+        descriptionLines.push(trimmed);
       }
     }
 
-    // Format the description
-    let result = parsed.description.join(' ').trim();
+    // Format the description - preserve line breaks from original docstring
+    let result = descriptionLines.join('\n').trim();
     
     // Add BDD sections if present
     if (parsed.given) result += `\n\n**Given:** ${parsed.given}`;

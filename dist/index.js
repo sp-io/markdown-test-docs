@@ -27444,12 +27444,9 @@ class LinkGenerator {
         else if (markdownRelativePath.endsWith('.spec.ts')) {
             markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
         }
-        else if (markdownRelativePath.startsWith('test_') && markdownRelativePath.endsWith('.py')) {
-            // Handle pytest files: test_example.py -> test_example.md
-            markdownRelativePath = markdownRelativePath.replace(/\.py$/, '.md');
-        }
-        else if (markdownRelativePath.endsWith('_test.py')) {
-            // Handle pytest files: example_test.py -> example_test.md
+        else if (markdownRelativePath.endsWith('.py')) {
+            // Handle all Python test files: convert .py extension to .md
+            // This fixes the issue with files in subfolders not getting .md extension
             markdownRelativePath = markdownRelativePath.replace(/\.py$/, '.md');
         }
         return markdownRelativePath;
@@ -27987,7 +27984,6 @@ class PytestExtractor {
             const testMatch = trimmedLine.match(/^def\s+(test_\w+)\s*\([^)]*\)\s*:/);
             if (testMatch) {
                 const testName = testMatch[1];
-                const fullTestName = currentClass ? `${currentClass}::${testName}` : testName;
                 const describeName = currentClass || path.basename(filePath, '.py');
                 // Look ahead for docstring after the function definition
                 let functionDocstring = [];
@@ -28042,9 +28038,14 @@ class PytestExtractor {
                 const link = this.linkGenerator.generateTestLink(filePath, lineNumber, describeName, testName);
                 // Extract tags from markers and description
                 const tags = [...currentMarkers, ...this.tagProcessor.extractTags(describeName, description)];
+                // Format test names: remove "test_" prefix and replace underscores with spaces
+                const formattedTestName = this.formatTestName(testName);
+                const formattedFullTestName = currentClass
+                    ? `${currentClass}::${formattedTestName}`
+                    : formattedTestName;
                 tests.push({
-                    testName: fullTestName,
-                    shortName: testName,
+                    testName: formattedFullTestName,
+                    shortName: formattedTestName,
                     describeName,
                     link,
                     description,
@@ -28054,7 +28055,7 @@ class PytestExtractor {
                     framework: 'pytest'
                 });
                 if (this.verbose) {
-                    console.log(`   Found test: ${fullTestName} with markers: [${currentMarkers.join(', ')}]`);
+                    console.log(`   Found test: ${formattedFullTestName} with markers: [${currentMarkers.join(', ')}]`);
                 }
                 // Reset markers and docstring after processing
                 currentMarkers = [];
@@ -28067,6 +28068,19 @@ class PytestExtractor {
             }
         }
         return tests;
+    }
+    /**
+     * Format test name: remove "test_" prefix and replace underscores with spaces
+     */
+    formatTestName(testName) {
+        let formatted = testName;
+        // Remove "test_" prefix if present
+        if (formatted.startsWith('test_')) {
+            formatted = formatted.substring(5);
+        }
+        // Replace underscores with spaces
+        formatted = formatted.replace(/_/g, ' ');
+        return formatted;
     }
     /**
      * Generate a summary for the file including test type counts
@@ -28092,14 +28106,13 @@ class PytestExtractor {
         };
     }
     /**
-     * Parse docstring content for test description and steps
+     * Parse docstring content for test description and steps - preserving original line breaks
      */
     parseTestDescription(docstringLines) {
         if (docstringLines.length === 0) {
             return '';
         }
         const parsed = {
-            description: [],
             given: '',
             when: '',
             then: '',
@@ -28107,10 +28120,16 @@ class PytestExtractor {
             steps: []
         };
         let currentSection = 'description';
+        const descriptionLines = [];
         for (const line of docstringLines) {
             const trimmed = line.trim();
-            if (!trimmed)
+            if (!trimmed) {
+                // Preserve empty lines in description
+                if (currentSection === 'description') {
+                    descriptionLines.push('');
+                }
                 continue;
+            }
             // Check for bullet points (steps)
             if (trimmed.startsWith('* ')) {
                 parsed.steps.push(trimmed.substring(2).trim());
@@ -28138,11 +28157,11 @@ class PytestExtractor {
             }
             // Add to current section
             if (currentSection === 'description') {
-                parsed.description.push(trimmed);
+                descriptionLines.push(trimmed);
             }
         }
-        // Format the description
-        let result = parsed.description.join(' ').trim();
+        // Format the description - preserve line breaks from original docstring
+        let result = descriptionLines.join('\n').trim();
         // Add BDD sections if present
         if (parsed.given)
             result += `\n\n**Given:** ${parsed.given}`;
@@ -28271,9 +28290,9 @@ class MarkdownGenerator {
         content += '|------|------|-----------|-------------|\n';
         for (const test of tests) {
             const typeEmoji = this.getTestTypeEmoji(test.testType);
-            const testName = this.escapeMarkdown(test.testName);
+            const testName = this.escapeMarkdownForTable(test.testName);
             const link = `[L${test.lineNumber}](${test.link})`;
-            const description = this.escapeMarkdown(test.description || 'No description available');
+            const description = this.escapeMarkdownForTable(test.description || 'No description available');
             content += `| ${typeEmoji} | ${link} | ${testName} | ${description} |\n`;
         }
         content += '\n---\n';
@@ -28373,12 +28392,12 @@ class MarkdownGenerator {
         content += '| Category | File | Link | Test Name | Description |\n';
         content += '|----------|------|------|-----------|-------------|\n';
         for (const test of allTests) {
-            const category = this.escapeMarkdown(test.category);
+            const category = this.escapeMarkdownForTable(test.category);
             const markdownRelativePath = this.linkGenerator.getMarkdownPath(test.filePath);
             const fileName = `[${test.fileName}](${markdownRelativePath})`;
-            const testName = this.escapeMarkdown(test.testName);
+            const testName = this.escapeMarkdownForTable(test.testName);
             const link = `[L${test.lineNumber}](${test.link})`;
-            const description = this.escapeMarkdown(test.description || 'No description available');
+            const description = this.escapeMarkdownForTable(test.description || 'No description available');
             content += `| ${category} | ${fileName} | ${link} | ${testName} | ${description} |\n`;
         }
         // Add tag-based index
@@ -28396,7 +28415,7 @@ class MarkdownGenerator {
                 for (const test of testsWithTag) {
                     const markdownRelativePath = this.linkGenerator.getMarkdownPath(test.filePath);
                     const fileName = `[${test.fileName}](${markdownRelativePath})`;
-                    const testName = this.escapeMarkdown(test.testName);
+                    const testName = this.escapeMarkdownForTable(test.testName);
                     const link = `[L${test.lineNumber}](${test.link})`;
                     content += `| ${fileName} | ${link} | ${testName} |\n`;
                 }
@@ -28483,6 +28502,15 @@ class MarkdownGenerator {
             case 'parametrize': return '🔢';
             default: return '❓';
         }
+    }
+    /**
+     * Escape markdown special characters for table cells - preserves line breaks as <br>
+     */
+    escapeMarkdownForTable(text) {
+        return text
+            .replace(/\|/g, '\\|')
+            .replace(/\n/g, '<br>')
+            .trim();
     }
     /**
      * Escape markdown special characters

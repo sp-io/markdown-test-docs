@@ -35,11 +35,9 @@ export class LinkGenerator {
       markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
     } else if (markdownRelativePath.endsWith('.spec.ts')) {
       markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
-    } else if (markdownRelativePath.startsWith('test_') && markdownRelativePath.endsWith('.py')) {
-      // Handle pytest files: test_example.py -> test_example.md
-      markdownRelativePath = markdownRelativePath.replace(/\.py$/, '.md');
-    } else if (markdownRelativePath.endsWith('_test.py')) {
-      // Handle pytest files: example_test.py -> example_test.md
+    } else if (markdownRelativePath.endsWith('.py')) {
+      // Handle all Python test files: convert .py extension to .md
+      // This fixes the issue with files in subfolders not getting .md extension
       markdownRelativePath = markdownRelativePath.replace(/\.py$/, '.md');
     }
     return markdownRelativePath;

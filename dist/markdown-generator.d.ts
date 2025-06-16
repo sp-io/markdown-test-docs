@@ -20,6 +20,10 @@ export declare class MarkdownGenerator {
      */
     private getTestTypeEmoji;
     /**
+     * Escape markdown special characters for table cells - preserves line breaks as <br>
+     */
+    private escapeMarkdownForTable;
+    /**
      * Escape markdown special characters
      */
     private escapeMarkdown;

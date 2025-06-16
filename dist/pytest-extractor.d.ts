@@ -10,11 +10,15 @@ export declare class PytestExtractor {
      */
     extractTests(content: string, filePath: string): TestCase[];
     /**
+     * Format test name: remove "test_" prefix and replace underscores with spaces
+     */
+    private formatTestName;
+    /**
      * Generate a summary for the file including test type counts
      */
     generateFileSummary(tests: TestCase[]): FileSummary;
     /**
-     * Parse docstring content for test description and steps
+     * Parse docstring content for test description and steps - preserving original line breaks
      */
     private parseTestDescription;
     /**
