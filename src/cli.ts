@@ -5,7 +5,7 @@
  * This file handles direct CLI execution of the generator
  */
 
-import MarkdownDocsGenerator from './markdown-docs.js';
+import MarkdownDocsGenerator from './markdown-docs';
 
 interface CommandLineOptions {
   source: string | undefined;

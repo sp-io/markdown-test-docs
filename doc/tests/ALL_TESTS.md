@@ -5,6 +5,22 @@ This file contains a comprehensive list of all test cases across the entire proj
 **Total Test Files:** 9
 **Total Test Cases:** 40
 
+## Test Type Summary
+
+| Type | Count | Percentage |
+|------|--------|------------|
+| ✅ Regular | 29 | 72.5% |
+| ⏭️ Skipped | 2 | 5.0% |
+| 📝 Todo | 1 | 2.5% |
+| 🔄 Each | 2 | 5.0% |
+| 🎯 Only | 2 | 5.0% |
+| ⚡ Concurrent | 2 | 5.0% |
+| 📊 Benchmark | 2 | 5.0% |
+
+## ⚠️ Global Warnings
+
+🚨 **Tests marked with .only found (2)** - These should not be committed to version control
+
 ## Test Distribution
 
 - **Test:** 38 tests

@@ -27246,78 +27246,30 @@ function requireCore () {
 
 var coreExports = requireCore();
 
-/**
- * Markdown documentation generator for Jest and Vitest test files
- * Extracts test information from TypeScript test files and generates markdown documentation
- */
-class MarkdownDocsGenerator {
+class FileUtils {
+    constructor(verbose = false) {
+        this.verbose = verbose;
+    }
     /**
-     * @param options - Configuration options
+     * Ensure a directory exists, creating it if necessary
      */
-    constructor(options = {}) {
-        // Helper function to check if a string is non-empty
-        const isNonEmptyString = (str) => {
-            return typeof str === 'string' && str.trim().length > 0;
-        };
-        this.testDir = isNonEmptyString(options.sourceDir) ? path.resolve(options.sourceDir) : path.join(process.cwd(), 'src', 'test');
-        this.docsDir = isNonEmptyString(options.outputDir) ? path.resolve(options.outputDir) : path.join(process.cwd(), 'doc', 'tests');
-        this.githubUrl = isNonEmptyString(options.githubUrl) ? options.githubUrl.replace(/\.git$/, '') : null;
-        this.githubBranch = isNonEmptyString(options.githubBranch) ? options.githubBranch : 'main';
-        this.repositoryRoot = isNonEmptyString(options.repositoryRoot) ? path.resolve(options.repositoryRoot) : process.cwd();
-        this.verbose = options.verbose || false;
-        this.testFiles = [];
-        this.documentation = new Map();
-        this.knownTags = new Set(['given', 'when', 'then', 'and', 'group', 'category']);
-        console.log(`Source directory: ${this.testDir}`);
-        console.log(`Output directory: ${this.docsDir}`);
-        console.log(`Repository root: ${this.repositoryRoot}`);
-        if (this.githubUrl) {
-            console.log(`GitHub URL: ${this.githubUrl}`);
-            console.log(`GitHub branch: ${this.githubBranch}`);
-        }
-        if (this.verbose) {
-            console.log('🔍 Verbose mode enabled');
+    ensureDirectory(dirPath) {
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+            if (this.verbose) {
+                console.log(`📁 Created directory: ${dirPath}`);
+            }
         }
     }
     /**
-     * Initialize the documentation generation process
+     * Recursively find all test files in a directory
      */
-    async generate() {
-        console.log('🚀 Starting markdown documentation generation...');
-        // Ensure docs directory exists
-        this.ensureDocsDirectory();
-        // Find all test files
-        this.findTestFiles();
-        // Process each test file
-        for (const testFile of this.testFiles) {
-            console.log(`📄 Processing: ${testFile}`);
-            await this.processTestFile(testFile);
-        }
-        // Generate markdown files
-        this.generateMarkdownFiles();
-        // Generate all tests file
-        this.generateAllTestsFile();
-        // Generate index file
-        this.generateIndexFile();
-        console.log(`✅ Documentation generated successfully in ${this.docsDir}`);
-    }
-    /**
-     * Ensure the documentation directory exists
-     */
-    ensureDocsDirectory() {
-        if (!fs.existsSync(this.docsDir)) {
-            fs.mkdirSync(this.docsDir, { recursive: true });
-            console.log(`📁 Created directory: ${this.docsDir}`);
-        }
-    }
-    /**
-     * Recursively find all test files
-     */
-    findTestFiles() {
-        console.log(`🔍 Looking for test files in: ${this.testDir}`);
+    findTestFiles(sourceDir) {
+        const testFiles = [];
+        console.log(`🔍 Looking for test files in: ${sourceDir}`);
         // Check if directory exists
-        if (!fs.existsSync(this.testDir)) {
-            throw new Error(`Source directory does not exist: ${this.testDir}`);
+        if (!fs.existsSync(sourceDir)) {
+            throw new Error(`Source directory does not exist: ${sourceDir}`);
         }
         const findTestFilesRecursive = (dir) => {
             if (this.verbose) {
@@ -27330,23 +27282,37 @@ class MarkdownDocsGenerator {
                     findTestFilesRecursive(fullPath);
                 }
                 else if (entry.isFile() && (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts'))) {
-                    this.testFiles.push(fullPath);
+                    testFiles.push(fullPath);
                     if (this.verbose) {
                         console.log(`   Found test file: ${fullPath}`);
                     }
                 }
             }
         };
-        findTestFilesRecursive(this.testDir);
-        console.log(`🔍 Found ${this.testFiles.length} test files`);
+        findTestFilesRecursive(sourceDir);
+        console.log(`🔍 Found ${testFiles.length} test files`);
+        return testFiles;
     }
     /**
-     * Process a single test file and extract test information
+     * Read file content as string
      */
-    async processTestFile(filePath) {
-        const content = fs.readFileSync(filePath, 'utf8');
-        const relativePath = path.relative(this.testDir, filePath);
-        // Handle both .test.ts and .spec.ts files
+    readFileContent(filePath) {
+        return fs.readFileSync(filePath, 'utf8');
+    }
+    /**
+     * Write content to file
+     */
+    writeFile(filePath, content) {
+        // Ensure directory exists
+        const dir = path.dirname(filePath);
+        this.ensureDirectory(dir);
+        fs.writeFileSync(filePath, content, 'utf8');
+        console.log(`📝 Generated: ${filePath}`);
+    }
+    /**
+     * Get file name without extension from file path
+     */
+    getFileNameWithoutExtension(filePath) {
         let fileName = path.basename(filePath);
         if (fileName.endsWith('.test.ts')) {
             fileName = fileName.replace('.test.ts', '');
@@ -27354,76 +27320,216 @@ class MarkdownDocsGenerator {
         else if (fileName.endsWith('.spec.ts')) {
             fileName = fileName.replace('.spec.ts', '');
         }
-        const tests = this.extractTests(content, filePath);
-        if (this.verbose) {
-            console.log(`   Found ${tests.length} tests in ${fileName}`);
-            const typeCounts = this.countTestTypes(tests);
-            console.log(`   Test types: Regular: ${typeCounts.regular}, Skipped: ${typeCounts.skipped}, Todo: ${typeCounts.todo}, Each: ${typeCounts.each}, Only: ${typeCounts.only}, Concurrent: ${typeCounts.concurrent}, Benchmark: ${typeCounts.benchmark}`);
+        return fileName;
+    }
+    /**
+     * Helper function to check if a string is non-empty
+     */
+    isNonEmptyString(str) {
+        return typeof str === 'string' && str.trim().length > 0;
+    }
+}
+
+class LinkGenerator {
+    constructor(githubUrl, githubBranch, repositoryRoot) {
+        this.githubUrl = githubUrl;
+        this.githubBranch = githubBranch;
+        this.repositoryRoot = repositoryRoot;
+    }
+    /**
+     * Generate a link to the specific test in the file
+     */
+    generateTestLink(filePath, lineNumber, describeName, testName) {
+        // Calculate path relative to repository root
+        const repoRelativePath = path.relative(this.repositoryRoot, filePath);
+        if (this.githubUrl) {
+            // Normalize GitHub URL (remove trailing slash)
+            const normalizedGithubUrl = this.githubUrl.replace(/\/$/, '');
+            // Create GitHub blob URL
+            const githubPath = repoRelativePath.replace(/\\/g, '/'); // Convert Windows paths to forward slashes
+            return `${normalizedGithubUrl}/blob/${this.githubBranch}/${githubPath}#L${lineNumber}`;
         }
-        if (tests.length > 0) {
-            this.documentation.set(relativePath, {
-                fileName,
-                filePath: relativePath,
-                fullPath: filePath,
-                tests,
-                summary: this.generateFileSummary(tests)
+        else {
+            // Fallback to relative path from repository root
+            return `${repoRelativePath.replace(/\\/g, '/')}#L${lineNumber}`;
+        }
+    }
+    /**
+     * Convert test file path to markdown path while preserving directory structure
+     */
+    getMarkdownPath(relativePath) {
+        let markdownRelativePath = relativePath;
+        if (markdownRelativePath.endsWith('.test.ts')) {
+            markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
+        }
+        else if (markdownRelativePath.endsWith('.spec.ts')) {
+            markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
+        }
+        return markdownRelativePath;
+    }
+    /**
+     * Get category name from file path
+     */
+    getCategoryFromPath(relativePath) {
+        const dir = path.dirname(relativePath);
+        return dir.charAt(0).toUpperCase() + dir.slice(1);
+    }
+}
+
+class TagProcessor {
+    constructor(verbose = false) {
+        this.knownTags = new Set(['given', 'when', 'then', 'and', 'group', 'category']);
+    }
+    /**
+     * Extract tags from test name and description
+     */
+    extractTags(describeName, description) {
+        const tags = [];
+        // Extract tags from describe name (e.g., [@slow][@proving])
+        const describeTagMatches = describeName.match(/\[@([^\]]+)\]/g);
+        if (describeTagMatches) {
+            tags.push(...describeTagMatches.map(tag => tag.slice(2, -1)));
+        }
+        // Extract additional context tags
+        if (description.toLowerCase().includes('failure') || description.toLowerCase().includes('error')) {
+            tags.push('error-case');
+        }
+        if (description.toLowerCase().includes('should not') || description.toLowerCase().includes('should fail')) {
+            tags.push('negative-test');
+        }
+        return tags;
+    }
+    /**
+     * Extract inline tags from test names (e.g., @smoke, @healthcheck)
+     */
+    extractInlineTags(testName) {
+        const tagMatches = testName.match(/@(\w+)/g);
+        return tagMatches ? tagMatches.map(tag => tag.slice(1)) : [];
+    }
+    /**
+     * Parse test description from TSDoc comments
+     */
+    parseTestDescription(commentLines, verbose = false) {
+        if (commentLines.length === 0) {
+            return '';
+        }
+        const sections = {
+            description: [],
+            given: '',
+            when: '',
+            then: '',
+            and: []
+        };
+        let currentSection = 'description';
+        let currentText = '';
+        for (const line of commentLines) {
+            if (line.startsWith('@given')) {
+                // Save previous section
+                if (currentText.trim()) {
+                    this.saveSectionText(sections, currentSection, currentText.trim());
+                }
+                currentSection = 'given';
+                currentText = line.replace('@given', '').trim();
+            }
+            else if (line.startsWith('@when')) {
+                // Save previous section
+                if (currentText.trim()) {
+                    this.saveSectionText(sections, currentSection, currentText.trim());
+                }
+                currentSection = 'when';
+                currentText = line.replace('@when', '').trim();
+            }
+            else if (line.startsWith('@then')) {
+                // Save previous section
+                if (currentText.trim()) {
+                    this.saveSectionText(sections, currentSection, currentText.trim());
+                }
+                currentSection = 'then';
+                currentText = line.replace('@then', '').trim();
+            }
+            else if (line.startsWith('@and')) {
+                // Save previous section
+                if (currentText.trim()) {
+                    this.saveSectionText(sections, currentSection, currentText.trim());
+                }
+                currentSection = 'and';
+                currentText = line.replace('@and', '').trim();
+            }
+            else if (line.startsWith('@')) {
+                // Check for unknown tags and log if verbose mode is enabled
+                const tagMatch = line.match(/^@(\w+)/);
+                if (tagMatch) {
+                    const tag = tagMatch[1];
+                    if (!this.knownTags.has(tag) && verbose) {
+                        console.log(`⚠️  Unknown tag found: @${tag} (line: "${line.trim()}")`);
+                    }
+                }
+                // Skip unknown JSDoc tags
+                continue;
+            }
+            else {
+                // Continue building current section
+                if (currentText) {
+                    currentText += ' ' + line;
+                }
+                else {
+                    currentText = line;
+                }
+            }
+        }
+        // Save the last section
+        if (currentText.trim()) {
+            this.saveSectionText(sections, currentSection, currentText.trim());
+        }
+        // Build formatted description
+        const formattedParts = [];
+        // Add main description if available
+        if (sections.description.length > 0) {
+            formattedParts.push(`**${sections.description.join(' ')}**`);
+        }
+        // Add Given/When/Then sections
+        if (sections.given) {
+            formattedParts.push(`**Given:** ${sections.given}`);
+        }
+        if (sections.when) {
+            formattedParts.push(`**When:** ${sections.when}`);
+        }
+        if (sections.then) {
+            formattedParts.push(`**Then:** ${sections.then}`);
+        }
+        // Add And sections
+        if (sections.and.length > 0) {
+            sections.and.forEach(andClause => {
+                formattedParts.push(`**And:** ${andClause}`);
             });
         }
-        else if (this.verbose) {
-            console.log(`   ⚠️  No tests extracted from ${fileName} - check test structure`);
+        return formattedParts.join('<br>');
+    }
+    /**
+     * Helper method to save section text to the appropriate section
+     */
+    saveSectionText(sections, currentSection, text) {
+        if (currentSection === 'description') {
+            sections.description.push(text);
+        }
+        else if (currentSection === 'and') {
+            sections.and.push(text);
+        }
+        else {
+            sections[currentSection] = text;
         }
     }
-    /**
-     * Determine test type from line content
-     */
-    determineTestType(line) {
-        if (line.includes('.skip'))
-            return 'skipped';
-        if (line.includes('.todo'))
-            return 'todo';
-        if (line.includes('.each'))
-            return 'each';
-        if (line.includes('.only'))
-            return 'only';
-        if (line.includes('.concurrent'))
-            return 'concurrent';
-        if (line.match(/\bbench\s*\(/))
-            return 'benchmark';
-        return 'regular';
+}
+
+class TestExtractor {
+    constructor(linkGenerator, verbose = false) {
+        this.linkGenerator = linkGenerator;
+        this.verbose = verbose;
+        this.tagProcessor = new TagProcessor(verbose);
     }
     /**
-     * Count test types in a test array
+     * Extract tests from file content
      */
-    countTestTypes(tests) {
-        const counts = {
-            regular: 0,
-            skipped: 0,
-            todo: 0,
-            each: 0,
-            only: 0,
-            concurrent: 0,
-            benchmark: 0
-        };
-        tests.forEach(test => {
-            counts[test.testType]++;
-        });
-        return counts;
-    }
-    /**
-     * Get test type emoji for display
-     */
-    getTestTypeEmoji(testType) {
-        switch (testType) {
-            case 'regular': return '✅';
-            case 'skipped': return '⏭️';
-            case 'todo': return '📝';
-            case 'each': return '🔄';
-            case 'only': return '🎯';
-            case 'concurrent': return '⚡';
-            case 'benchmark': return '📊';
-            default: return '❓';
-        }
-    }
     extractTests(content, filePath) {
         const tests = [];
         const lines = content.split('\n');
@@ -27485,9 +27591,9 @@ class MarkdownDocsGenerator {
                     if (testTemplateMatch) {
                         dynamicTestTemplate = testTemplateMatch[1];
                         const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber)
-                            ? this.parseTestDescription(commentLines)
+                            ? this.tagProcessor.parseTestDescription(commentLines, this.verbose)
                             : 'Dynamic test generated from forEach loop';
-                        const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, dynamicTestTemplate);
+                        const link = this.linkGenerator.generateTestLink(filePath, lineNumber, currentDescribe.name, dynamicTestTemplate);
                         tests.push({
                             testName: `${currentDescribe.name} > ${dynamicTestTemplate} (dynamic)`,
                             shortName: `${dynamicTestTemplate} (dynamic)`,
@@ -27495,7 +27601,7 @@ class MarkdownDocsGenerator {
                             link,
                             description,
                             lineNumber,
-                            tags: this.extractTags(currentDescribe.name, description).concat(['dynamic']),
+                            tags: this.tagProcessor.extractTags(currentDescribe.name, description).concat(['dynamic']),
                             testType: 'each' // Dynamic tests are considered parametric
                         });
                         if (this.verbose) {
@@ -27530,10 +27636,10 @@ class MarkdownDocsGenerator {
                 const testName = testMatch[1];
                 const fullTestName = `${currentDescribe.name} > ${testName}`;
                 const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber)
-                    ? this.parseTestDescription(commentLines)
+                    ? this.tagProcessor.parseTestDescription(commentLines, this.verbose)
                     : '';
                 // Generate link to the test
-                const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, testName);
+                const link = this.linkGenerator.generateTestLink(filePath, lineNumber, currentDescribe.name, testName);
                 tests.push({
                     testName: fullTestName,
                     shortName: testName,
@@ -27541,7 +27647,7 @@ class MarkdownDocsGenerator {
                     link,
                     description,
                     lineNumber,
-                    tags: this.extractTags(currentDescribe.name, description),
+                    tags: this.tagProcessor.extractTags(currentDescribe.name, description),
                     testType: this.determineTestType(Array.isArray(testMatch) ? testMatch[0] : line)
                 });
                 // Reset comment lines after processing
@@ -27565,12 +27671,12 @@ class MarkdownDocsGenerator {
                 if (testName) {
                     const fullTestName = `${currentDescribe.name} > ${testName}`;
                     const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber)
-                        ? this.parseTestDescription(commentLines)
+                        ? this.tagProcessor.parseTestDescription(commentLines, this.verbose)
                         : '';
                     // Generate link to the test
-                    const link = this.generateTestLink(filePath, foundLineNumber, currentDescribe.name, testName);
+                    const link = this.linkGenerator.generateTestLink(filePath, foundLineNumber, currentDescribe.name, testName);
                     // Add "parameterized" tag for .each tests
-                    const tags = this.extractTags(currentDescribe.name, description);
+                    const tags = this.tagProcessor.extractTags(currentDescribe.name, description);
                     if (testStartMatch[0].includes('.each')) {
                         tags.push('parameterized');
                     }
@@ -27595,15 +27701,15 @@ class MarkdownDocsGenerator {
                 const testName = simpleTestMatch[1];
                 `${currentDescribe.name} > ${testName}`;
                 // Extract inline tags from test name
-                const inlineTags = this.extractInlineTags(testName);
+                const inlineTags = this.tagProcessor.extractInlineTags(testName);
                 const cleanTestName = testName.replace(/@\w+/g, '').trim();
                 // Use previous comment if available and relevant, or create basic description
                 const description = this.isCommentRelevantToTest(commentLines, commentEndLineNumber, lineNumber)
-                    ? this.parseTestDescription(commentLines)
+                    ? this.tagProcessor.parseTestDescription(commentLines, this.verbose)
                     : 'Test with inline tags';
                 // Generate link to the test
-                const link = this.generateTestLink(filePath, lineNumber, currentDescribe.name, cleanTestName);
-                const allTags = this.extractTags(currentDescribe.name, description).concat(inlineTags);
+                const link = this.linkGenerator.generateTestLink(filePath, lineNumber, currentDescribe.name, cleanTestName);
+                const allTags = this.tagProcessor.extractTags(currentDescribe.name, description).concat(inlineTags);
                 tests.push({
                     testName: `${currentDescribe.name} > ${cleanTestName}`,
                     shortName: cleanTestName,
@@ -27625,175 +27731,6 @@ class MarkdownDocsGenerator {
             }
         }
         return tests;
-    }
-    /**
-     * Parse test description from TSDoc comments
-     */
-    parseTestDescription(commentLines) {
-        if (commentLines.length === 0) {
-            return '';
-        }
-        const sections = {
-            description: [],
-            given: '',
-            when: '',
-            then: '',
-            and: []
-        };
-        let currentSection = 'description';
-        let currentText = '';
-        for (const line of commentLines) {
-            if (line.startsWith('@given')) {
-                // Save previous section
-                if (currentText.trim()) {
-                    this.saveSectionText(sections, currentSection, currentText.trim());
-                }
-                currentSection = 'given';
-                currentText = line.replace('@given', '').trim();
-            }
-            else if (line.startsWith('@when')) {
-                // Save previous section
-                if (currentText.trim()) {
-                    this.saveSectionText(sections, currentSection, currentText.trim());
-                }
-                currentSection = 'when';
-                currentText = line.replace('@when', '').trim();
-            }
-            else if (line.startsWith('@then')) {
-                // Save previous section
-                if (currentText.trim()) {
-                    this.saveSectionText(sections, currentSection, currentText.trim());
-                }
-                currentSection = 'then';
-                currentText = line.replace('@then', '').trim();
-            }
-            else if (line.startsWith('@and')) {
-                // Save previous section
-                if (currentText.trim()) {
-                    this.saveSectionText(sections, currentSection, currentText.trim());
-                }
-                currentSection = 'and';
-                currentText = line.replace('@and', '').trim();
-            }
-            else if (line.startsWith('@')) {
-                // Check for unknown tags and log if verbose mode is enabled
-                const tagMatch = line.match(/^@(\w+)/);
-                if (tagMatch) {
-                    const tag = tagMatch[1];
-                    if (!this.knownTags.has(tag) && this.verbose) {
-                        console.log(`⚠️  Unknown tag found: @${tag} (line: "${line.trim()}")`);
-                    }
-                }
-                // Skip unknown JSDoc tags
-                continue;
-            }
-            else {
-                // Continue building current section
-                if (currentText) {
-                    currentText += ' ' + line;
-                }
-                else {
-                    currentText = line;
-                }
-            }
-        }
-        // Save the last section
-        if (currentText.trim()) {
-            this.saveSectionText(sections, currentSection, currentText.trim());
-        }
-        // Build formatted description
-        const formattedParts = [];
-        // Add main description if available
-        if (sections.description.length > 0) {
-            formattedParts.push(`**${sections.description.join(' ')}**`);
-        }
-        // Add Given/When/Then sections
-        if (sections.given) {
-            formattedParts.push(`**Given:** ${sections.given}`);
-        }
-        if (sections.when) {
-            formattedParts.push(`**When:** ${sections.when}`);
-        }
-        if (sections.then) {
-            formattedParts.push(`**Then:** ${sections.then}`);
-        }
-        // Add And sections
-        if (sections.and.length > 0) {
-            sections.and.forEach(andClause => {
-                formattedParts.push(`**And:** ${andClause}`);
-            });
-        }
-        return formattedParts.join('<br>');
-    }
-    /**
-     * Helper method to save section text to the appropriate section
-     */
-    saveSectionText(sections, currentSection, text) {
-        if (currentSection === 'description') {
-            sections.description.push(text);
-        }
-        else if (currentSection === 'and') {
-            sections.and.push(text);
-        }
-        else {
-            sections[currentSection] = text;
-        }
-    }
-    /**
-     * Check if the comment is relevant to the current test
-     * Comments should be within 3 lines of the test declaration to be considered relevant
-     */
-    isCommentRelevantToTest(commentLines, commentEndLineNumber, testLineNumber) {
-        if (commentLines.length === 0 || commentEndLineNumber === -1) {
-            return false;
-        }
-        // Comment should be within 3 lines of the test (allowing for some whitespace)
-        const distance = testLineNumber - commentEndLineNumber;
-        return distance >= 0 && distance <= 3;
-    }
-    /**
-     * Extract inline tags from test names (e.g., @smoke, @healthcheck)
-     */
-    extractInlineTags(testName) {
-        const tagMatches = testName.match(/@(\w+)/g);
-        return tagMatches ? tagMatches.map(tag => tag.slice(1)) : [];
-    }
-    /**
-     * Extract tags from test name and description
-     */
-    extractTags(describeName, description) {
-        const tags = [];
-        // Extract tags from describe name (e.g., [@slow][@proving])
-        const describeTagMatches = describeName.match(/\[@([^\]]+)\]/g);
-        if (describeTagMatches) {
-            tags.push(...describeTagMatches.map(tag => tag.slice(2, -1)));
-        }
-        // Extract additional context tags
-        if (description.toLowerCase().includes('failure') || description.toLowerCase().includes('error')) {
-            tags.push('error-case');
-        }
-        if (description.toLowerCase().includes('should not') || description.toLowerCase().includes('should fail')) {
-            tags.push('negative-test');
-        }
-        return tags;
-    }
-    /**
-     * Generate a link to the specific test in the file
-     */
-    generateTestLink(filePath, lineNumber, describeName, testName) {
-        // Calculate path relative to repository root
-        const repoRelativePath = path.relative(this.repositoryRoot, filePath);
-        if (this.githubUrl) {
-            // Normalize GitHub URL (remove trailing slash)
-            const normalizedGithubUrl = this.githubUrl.replace(/\/$/, '');
-            // Create GitHub blob URL
-            const githubPath = repoRelativePath.replace(/\\/g, '/'); // Convert Windows paths to forward slashes
-            return `${normalizedGithubUrl}/blob/${this.githubBranch}/${githubPath}#L${lineNumber}`;
-        }
-        else {
-            // Fallback to relative path from repository root
-            return `${repoRelativePath.replace(/\\/g, '/')}#L${lineNumber}`;
-        }
     }
     /**
      * Generate a summary for the file including test type counts
@@ -27818,31 +27755,58 @@ class MarkdownDocsGenerator {
         };
     }
     /**
-     * Generate markdown files for each test file
+     * Determine test type from line content
      */
-    generateMarkdownFiles() {
-        for (const [relativePath, fileData] of this.documentation) {
-            // Convert test file path to markdown path while preserving directory structure
-            let markdownRelativePath = relativePath;
-            if (markdownRelativePath.endsWith('.test.ts')) {
-                markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
-            }
-            else if (markdownRelativePath.endsWith('.spec.ts')) {
-                markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
-            }
-            const markdownPath = path.join(this.docsDir, markdownRelativePath);
-            // Ensure directory exists
-            const markdownDir = path.dirname(markdownPath);
-            if (!fs.existsSync(markdownDir)) {
-                fs.mkdirSync(markdownDir, { recursive: true });
-                if (this.verbose) {
-                    console.log(`📁 Created directory: ${markdownDir}`);
-                }
-            }
-            const content = this.generateMarkdownContent(fileData);
-            fs.writeFileSync(markdownPath, content, 'utf8');
-            console.log(`📝 Generated: ${markdownPath}`);
+    determineTestType(line) {
+        if (line.includes('.skip'))
+            return 'skipped';
+        if (line.includes('.todo'))
+            return 'todo';
+        if (line.includes('.each'))
+            return 'each';
+        if (line.includes('.only'))
+            return 'only';
+        if (line.includes('.concurrent'))
+            return 'concurrent';
+        if (line.match(/\bbench\s*\(/))
+            return 'benchmark';
+        return 'regular';
+    }
+    /**
+     * Count test types in a test array
+     */
+    countTestTypes(tests) {
+        const counts = {
+            regular: 0,
+            skipped: 0,
+            todo: 0,
+            each: 0,
+            only: 0,
+            concurrent: 0,
+            benchmark: 0
+        };
+        tests.forEach(test => {
+            counts[test.testType]++;
+        });
+        return counts;
+    }
+    /**
+     * Check if the comment is relevant to the current test
+     * Comments should be within 3 lines of the test declaration to be considered relevant
+     */
+    isCommentRelevantToTest(commentLines, commentEndLineNumber, testLineNumber) {
+        if (commentLines.length === 0 || commentEndLineNumber === -1) {
+            return false;
         }
+        // Comment should be within 3 lines of the test (allowing for some whitespace)
+        const distance = testLineNumber - commentEndLineNumber;
+        return distance >= 0 && distance <= 3;
+    }
+}
+
+class MarkdownGenerator {
+    constructor(linkGenerator) {
+        this.linkGenerator = linkGenerator;
     }
     /**
      * Generate enhanced markdown content for a single file
@@ -27911,29 +27875,18 @@ class MarkdownDocsGenerator {
         return content;
     }
     /**
-     * Escape markdown special characters
-     */
-    escapeMarkdown(text) {
-        return text
-            .replace(/\|/g, '\\|')
-            .replace(/\n/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-    /**
      * Generate comprehensive ALL_TESTS.md file with all test cases
      */
-    generateAllTestsFile() {
-        const allTestsPath = path.join(this.docsDir, 'ALL_TESTS.md');
+    generateAllTestsContent(documentation) {
         // Collect all tests from all files
         const allTests = [];
-        for (const [relativePath, fileData] of this.documentation) {
+        for (const [relativePath, fileData] of documentation) {
             for (const test of fileData.tests) {
                 allTests.push({
                     ...test,
                     fileName: fileData.fileName,
                     filePath: relativePath,
-                    category: this.getCategoryFromPath(relativePath)
+                    category: this.linkGenerator.getCategoryFromPath(relativePath)
                 });
             }
         }
@@ -27949,8 +27902,53 @@ class MarkdownDocsGenerator {
         });
         let content = '# All Tests Documentation\n\n';
         content += 'This file contains a comprehensive list of all test cases across the entire project.\n\n';
-        content += `**Total Test Files:** ${this.documentation.size}\n`;
+        content += `**Total Test Files:** ${documentation.size}\n`;
         content += `**Total Test Cases:** ${allTests.length}\n\n`;
+        // Calculate global test type summary
+        const globalTestTypes = {
+            regular: 0,
+            skipped: 0,
+            todo: 0,
+            each: 0,
+            only: 0,
+            concurrent: 0,
+            benchmark: 0
+        };
+        allTests.forEach(test => {
+            globalTestTypes[test.testType]++;
+        });
+        // Add global test type summary
+        content += '## Test Type Summary\n\n';
+        content += '| Type | Count | Percentage |\n';
+        content += '|------|--------|------------|\n';
+        const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+        for (const testType of testTypeOrder) {
+            const count = globalTestTypes[testType];
+            if (count > 0) {
+                const percentage = ((count / allTests.length) * 100).toFixed(1);
+                const emoji = this.getTestTypeEmoji(testType);
+                const typeLabel = testType.charAt(0).toUpperCase() + testType.slice(1);
+                content += `| ${emoji} ${typeLabel} | ${count} | ${percentage}% |\n`;
+            }
+        }
+        content += '\n';
+        // Add warnings for potentially problematic test types
+        const warnings = [];
+        if (globalTestTypes.skipped > allTests.length * 0.2) {
+            warnings.push(`⚠️ **High number of skipped tests (${globalTestTypes.skipped}/${allTests.length})** - Consider reviewing or removing these tests`);
+        }
+        if (globalTestTypes.only > 0) {
+            warnings.push(`🚨 **Tests marked with .only found (${globalTestTypes.only})** - These should not be committed to version control`);
+        }
+        if (globalTestTypes.todo > allTests.length * 0.3) {
+            warnings.push(`📝 **Many TODO tests (${globalTestTypes.todo}/${allTests.length})** - Consider implementing these tests`);
+        }
+        if (warnings.length > 0) {
+            content += '## ⚠️ Global Warnings\n\n';
+            warnings.forEach(warning => {
+                content += `${warning}\n\n`;
+            });
+        }
         // Add statistics by category
         const categoryStats = {};
         allTests.forEach(test => {
@@ -27967,13 +27965,7 @@ class MarkdownDocsGenerator {
         content += '|----------|------|------|-----------|-------------|\n';
         for (const test of allTests) {
             const category = this.escapeMarkdown(test.category);
-            let markdownRelativePath = test.filePath;
-            if (markdownRelativePath.endsWith('.test.ts')) {
-                markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
-            }
-            else if (markdownRelativePath.endsWith('.spec.ts')) {
-                markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
-            }
+            const markdownRelativePath = this.linkGenerator.getMarkdownPath(test.filePath);
             const fileName = `[${test.fileName}](${markdownRelativePath})`;
             const testName = this.escapeMarkdown(test.testName);
             const link = `[L${test.lineNumber}](${test.link})`;
@@ -27993,13 +27985,7 @@ class MarkdownDocsGenerator {
                 content += '| File | Link | Test Name |\n';
                 content += '|------|------|-----------|\n';
                 for (const test of testsWithTag) {
-                    let markdownRelativePath = test.filePath;
-                    if (markdownRelativePath.endsWith('.test.ts')) {
-                        markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
-                    }
-                    else if (markdownRelativePath.endsWith('.spec.ts')) {
-                        markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
-                    }
+                    const markdownRelativePath = this.linkGenerator.getMarkdownPath(test.filePath);
                     const fileName = `[${test.fileName}](${markdownRelativePath})`;
                     const testName = this.escapeMarkdown(test.testName);
                     const link = `[L${test.lineNumber}](${test.link})`;
@@ -28010,52 +27996,48 @@ class MarkdownDocsGenerator {
         }
         content += '\n---\n';
         content += '*Generator: markdown-docs.ts*\n';
-        fs.writeFileSync(allTestsPath, content, 'utf8');
-        console.log(`📊 Generated all tests file: ${allTestsPath}`);
-    }
-    /**
-     * Get category name from file path
-     */
-    getCategoryFromPath(relativePath) {
-        const dir = path.dirname(relativePath);
-        return dir.charAt(0).toUpperCase() + dir.slice(1);
+        return content;
     }
     /**
      * Generate the index file listing all documented files
      */
-    generateIndexFile() {
-        const indexPath = path.join(this.docsDir, 'README.md');
+    generateIndexContent(documentation) {
         let content = '# Test Documentation Index\n\n';
         content += 'This directory contains automatically generated documentation for all test files.\n\n';
-        content += `**Total Files:** ${this.documentation.size}\n`;
-        content += `**Total Tests:** ${Array.from(this.documentation.values()).reduce((sum, file) => sum + file.summary.total, 0)}\n\n`;
+        content += `**Total Files:** ${documentation.size}\n`;
+        content += `**Total Tests:** ${Array.from(documentation.values()).reduce((sum, file) => sum + file.summary.total, 0)}\n\n`;
         // Add quick navigation
         content += '## Quick Navigation\n\n';
         content += '- 📊 **[ALL_TESTS.md](ALL_TESTS.md)** - Comprehensive list of all test cases\n';
         content += '- 📁 **Individual Files** - Detailed documentation for each test file\n\n';
         // Generate summary table
         content += '## Files Overview\n\n';
-        content += '| File | Test Count | Categories | Tags |\n';
-        content += '|------|------------|------------|------|\n';
-        const sortedFiles = Array.from(this.documentation.entries()).sort(([a], [b]) => a.localeCompare(b));
+        content += '| File | Test Count | Test Types | Categories | Tags |\n';
+        content += '|------|------------|------------|------------|------|\n';
+        const sortedFiles = Array.from(documentation.entries()).sort(([a], [b]) => a.localeCompare(b));
         for (const [relativePath, fileData] of sortedFiles) {
             const fileName = fileData.fileName;
-            let markdownRelativePath = relativePath;
-            if (markdownRelativePath.endsWith('.test.ts')) {
-                markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
-            }
-            else if (markdownRelativePath.endsWith('.spec.ts')) {
-                markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
-            }
+            const markdownRelativePath = this.linkGenerator.getMarkdownPath(relativePath);
             const testCount = fileData.summary.total;
             const categories = Object.keys(fileData.summary.categories).join(', ');
             const tags = fileData.summary.tags.join(', ');
-            content += `| [${fileName}](${markdownRelativePath}) | ${testCount} | ${categories} | ${tags} |\n`;
+            // Generate test type summary for this file
+            const testTypes = [];
+            const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+            for (const testType of testTypeOrder) {
+                const count = fileData.summary.testTypes[testType];
+                if (count > 0) {
+                    const emoji = this.getTestTypeEmoji(testType);
+                    testTypes.push(`${emoji}${count}`);
+                }
+            }
+            const testTypesSummary = testTypes.join(' ');
+            content += `| [${fileName}](${markdownRelativePath}) | ${testCount} | ${testTypesSummary} | ${categories} | ${tags} |\n`;
         }
         // Add detailed breakdown by directory
         content += '\n## Directory Structure\n\n';
         const directories = new Map();
-        for (const [relativePath, fileData] of this.documentation) {
+        for (const [relativePath, fileData] of documentation) {
             const dir = path.dirname(relativePath);
             if (!directories.has(dir)) {
                 directories.set(dir, []);
@@ -28067,20 +28049,159 @@ class MarkdownDocsGenerator {
             const totalTests = files.reduce((sum, file) => sum + file.summary.total, 0);
             content += `**Files:** ${files.length} | **Tests:** ${totalTests}\n\n`;
             for (const file of files.sort((a, b) => a.fileName.localeCompare(b.fileName))) {
-                let markdownRelativePath = file.filePath;
-                if (markdownRelativePath.endsWith('.test.ts')) {
-                    markdownRelativePath = markdownRelativePath.replace(/\.test\.ts$/, '.md');
-                }
-                else if (markdownRelativePath.endsWith('.spec.ts')) {
-                    markdownRelativePath = markdownRelativePath.replace(/\.spec\.ts$/, '.md');
-                }
+                const markdownRelativePath = this.linkGenerator.getMarkdownPath(file.filePath);
                 content += `- [${file.fileName}](${markdownRelativePath}) (${file.summary.total} tests)\n`;
             }
             content += '\n';
         }
         content += '\n---\n';
         content += '*Generator: markdown-docs.ts*\n';
-        fs.writeFileSync(indexPath, content, 'utf8');
+        return content;
+    }
+    /**
+     * Get test type emoji for display
+     */
+    getTestTypeEmoji(testType) {
+        switch (testType) {
+            case 'regular': return '✅';
+            case 'skipped': return '⏭️';
+            case 'todo': return '📝';
+            case 'each': return '🔄';
+            case 'only': return '🎯';
+            case 'concurrent': return '⚡';
+            case 'benchmark': return '📊';
+            default: return '❓';
+        }
+    }
+    /**
+     * Escape markdown special characters
+     */
+    escapeMarkdown(text) {
+        return text
+            .replace(/\|/g, '\\|')
+            .replace(/\n/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+}
+
+/**
+ * Markdown documentation generator for Jest and Vitest test files
+ * Extracts test information from TypeScript test files and generates markdown documentation
+ */
+class MarkdownDocsGenerator {
+    /**
+     * @param options - Configuration options
+     */
+    constructor(options = {}) {
+        this.fileUtils = new FileUtils(options.verbose || false);
+        this.testDir = this.fileUtils.isNonEmptyString(options.sourceDir)
+            ? path.resolve(options.sourceDir)
+            : path.join(process.cwd(), 'src', 'test');
+        this.docsDir = this.fileUtils.isNonEmptyString(options.outputDir)
+            ? path.resolve(options.outputDir)
+            : path.join(process.cwd(), 'doc', 'tests');
+        const githubUrl = this.fileUtils.isNonEmptyString(options.githubUrl)
+            ? options.githubUrl.replace(/\.git$/, '')
+            : null;
+        const githubBranch = this.fileUtils.isNonEmptyString(options.githubBranch)
+            ? options.githubBranch
+            : 'main';
+        const repositoryRoot = this.fileUtils.isNonEmptyString(options.repositoryRoot)
+            ? path.resolve(options.repositoryRoot)
+            : process.cwd();
+        this.verbose = options.verbose || false;
+        this.documentation = new Map();
+        // Initialize modules
+        this.linkGenerator = new LinkGenerator(githubUrl, githubBranch, repositoryRoot);
+        this.testExtractor = new TestExtractor(this.linkGenerator, this.verbose);
+        this.markdownGenerator = new MarkdownGenerator(this.linkGenerator);
+        console.log(`Source directory: ${this.testDir}`);
+        console.log(`Output directory: ${this.docsDir}`);
+        console.log(`Repository root: ${repositoryRoot}`);
+        if (githubUrl) {
+            console.log(`GitHub URL: ${githubUrl}`);
+            console.log(`GitHub branch: ${githubBranch}`);
+        }
+        if (this.verbose) {
+            console.log('🔍 Verbose mode enabled');
+        }
+    }
+    /**
+     * Initialize the documentation generation process
+     */
+    async generate() {
+        console.log('🚀 Starting markdown documentation generation...');
+        // Ensure docs directory exists
+        this.fileUtils.ensureDirectory(this.docsDir);
+        // Find all test files
+        const testFiles = this.fileUtils.findTestFiles(this.testDir);
+        // Process each test file
+        for (const testFile of testFiles) {
+            console.log(`📄 Processing: ${testFile}`);
+            await this.processTestFile(testFile);
+        }
+        // Generate markdown files
+        this.generateMarkdownFiles();
+        // Generate all tests file
+        this.generateAllTestsFile();
+        // Generate index file
+        this.generateIndexFile();
+        console.log(`✅ Documentation generated successfully in ${this.docsDir}`);
+    }
+    /**
+     * Process a single test file and extract test information
+     */
+    async processTestFile(filePath) {
+        const content = this.fileUtils.readFileContent(filePath);
+        const relativePath = path.relative(this.testDir, filePath);
+        const fileName = this.fileUtils.getFileNameWithoutExtension(filePath);
+        const tests = this.testExtractor.extractTests(content, filePath);
+        if (this.verbose) {
+            console.log(`   Found ${tests.length} tests in ${fileName}`);
+            const summary = this.testExtractor.generateFileSummary(tests);
+            console.log(`   Test types: Regular: ${summary.testTypes.regular}, Skipped: ${summary.testTypes.skipped}, Todo: ${summary.testTypes.todo}, Each: ${summary.testTypes.each}, Only: ${summary.testTypes.only}, Concurrent: ${summary.testTypes.concurrent}, Benchmark: ${summary.testTypes.benchmark}`);
+        }
+        if (tests.length > 0) {
+            this.documentation.set(relativePath, {
+                fileName,
+                filePath: relativePath,
+                fullPath: filePath,
+                tests,
+                summary: this.testExtractor.generateFileSummary(tests)
+            });
+        }
+        else if (this.verbose) {
+            console.log(`   ⚠️  No tests extracted from ${fileName} - check test structure`);
+        }
+    }
+    /**
+     * Generate markdown files for each test file
+     */
+    generateMarkdownFiles() {
+        for (const [relativePath, fileData] of this.documentation) {
+            const markdownRelativePath = this.linkGenerator.getMarkdownPath(relativePath);
+            const markdownPath = path.join(this.docsDir, markdownRelativePath);
+            const content = this.markdownGenerator.generateMarkdownContent(fileData);
+            this.fileUtils.writeFile(markdownPath, content);
+        }
+    }
+    /**
+     * Generate comprehensive ALL_TESTS.md file with all test cases
+     */
+    generateAllTestsFile() {
+        const allTestsPath = path.join(this.docsDir, 'ALL_TESTS.md');
+        const content = this.markdownGenerator.generateAllTestsContent(this.documentation);
+        this.fileUtils.writeFile(allTestsPath, content);
+        console.log(`📊 Generated all tests file: ${allTestsPath}`);
+    }
+    /**
+     * Generate the index file listing all documented files
+     */
+    generateIndexFile() {
+        const indexPath = path.join(this.docsDir, 'README.md');
+        const content = this.markdownGenerator.generateIndexContent(this.documentation);
+        this.fileUtils.writeFile(indexPath, content);
         console.log(`📋 Generated index: ${indexPath}`);
     }
 }

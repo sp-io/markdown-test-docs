@@ -1,8 +1,8 @@
 import * as core from '@actions/core';
 import fs from 'fs';
 import path from 'path';
-import MarkdownDocsGenerator from './markdown-docs.js'; // TypeScript/Jest generator
-import PytestMarkdownGenerator from './pytest-markdown-generator.js'; // Python/pytest generator
+import MarkdownDocsGenerator from './markdown-docs'; // TypeScript/Jest generator
+import PytestMarkdownGenerator from './pytest-markdown-generator'; // Python/pytest generator
 
 interface ActionInputs {
   source: string;

@@ -12,17 +12,17 @@ This directory contains automatically generated documentation for all test files
 
 ## Files Overview
 
-| File | Test Count | Categories | Tags |
-|------|------------|------------|------|
-| [01_uiVerifications](test/01_uiVerifications.md) | 5 | UI Verifications, Form Validations | error-case |
-| [and-tag-examples](test/and-tag-examples.md) | 6 | User Authentication [@security], Data Processing Pipeline [@integration][@slow], Error Handling [@error-cases], Performance Optimization [@performance] | security, integration, slow, error-cases, error-case, performance |
-| [enhanced-demo](test/enhanced-demo.md) | 7 | Enhanced Test Type Demo, Performance Tests | parameterized, negative-test |
-| [example](test/example.md) | 4 | MarkdownDocsGenerator, Documentation Generation [@advanced] | error-case, advanced |
-| [github-link](test/github-link.md) | 5 | GitHub Link Generation, Repository Root Configuration [@configuration] | configuration |
-| [verbose-test](test/verbose-test.md) | 4 | Verbose Mode Testing [@testing], Error Scenarios [@errors] | testing, errors, error-case |
-| [vitest-example](test/vitest-example.md) | 7 | Vitest Compatibility Tests, Vitest Benchmarks | parameterized |
-| [A](test/X/A.md) | 1 | Sample test in X directory |  |
-| [A](test/Y/A.md) | 1 | Sample test in Y directory |  |
+| File | Test Count | Test Types | Categories | Tags |
+|------|------------|------------|------------|------|
+| [01_uiVerifications](test/01_uiVerifications.md) | 5 | ✅5 | UI Verifications, Form Validations | error-case |
+| [and-tag-examples](test/and-tag-examples.md) | 6 | ✅6 | User Authentication [@security], Data Processing Pipeline [@integration][@slow], Error Handling [@error-cases], Performance Optimization [@performance] | security, integration, slow, error-cases, error-case, performance |
+| [enhanced-demo](test/enhanced-demo.md) | 7 | ✅1 ⏭️1 📝1 🔄1 🎯1 ⚡1 📊1 | Enhanced Test Type Demo, Performance Tests | parameterized, negative-test |
+| [example](test/example.md) | 4 | ✅4 | MarkdownDocsGenerator, Documentation Generation [@advanced] | error-case, advanced |
+| [github-link](test/github-link.md) | 5 | ✅5 | GitHub Link Generation, Repository Root Configuration [@configuration] | configuration |
+| [verbose-test](test/verbose-test.md) | 4 | ✅4 | Verbose Mode Testing [@testing], Error Scenarios [@errors] | testing, errors, error-case |
+| [vitest-example](test/vitest-example.md) | 7 | ✅2 ⏭️1 🔄1 🎯1 ⚡1 📊1 | Vitest Compatibility Tests, Vitest Benchmarks | parameterized |
+| [A](test/X/A.md) | 1 | ✅1 | Sample test in X directory |  |
+| [A](test/Y/A.md) | 1 | ✅1 | Sample test in Y directory |  |
 
 ## Directory Structure
 
