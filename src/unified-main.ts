@@ -1,8 +1,5 @@
 import * as core from '@actions/core';
-import fs from 'fs';
-import path from 'path';
 import MarkdownDocsGenerator from './markdown-docs'; // TypeScript/Jest generator
-import PytestMarkdownGenerator from './pytest-markdown-generator'; // Python/pytest generator
 
 interface ActionInputs {
   source: string;
@@ -11,15 +8,6 @@ interface ActionInputs {
   githubBranch: string;
   repositoryRoot: string;
   verbose: boolean;
-  testFramework: 'jest' | 'pytest' | 'auto';
-}
-
-type TestFramework = 'jest' | 'pytest';
-
-interface FrameworkDetectionResult {
-  framework: TestFramework;
-  confidence: number;
-  reasons: string[];
 }
 
 function getActionInputs(): ActionInputs {
@@ -29,7 +17,6 @@ function getActionInputs(): ActionInputs {
   const githubBranch = core.getInput('github-branch').trim() || 'main';
   const repositoryRoot = core.getInput('repository-root').trim();
   const verbose = core.getInput('verbose').toLowerCase() === 'true';
-  const testFramework = (core.getInput('test-framework').trim() || 'auto') as 'jest' | 'pytest' | 'auto';
 
   return {
     source,
@@ -37,113 +24,11 @@ function getActionInputs(): ActionInputs {
     githubUrl,
     githubBranch,
     repositoryRoot,
-    verbose,
-    testFramework
+    verbose
   };
 }
 
-function detectTestFramework(sourceDir?: string): FrameworkDetectionResult {
-  const searchDirs = [
-    sourceDir,
-    'tests',
-    'test',
-    'src/test',
-    'src/tests',
-    '__tests__',
-    'spec'
-  ].filter(Boolean).map(dir => path.resolve(dir || '.'));
-
-  let jestScore = 0;
-  let pytestScore = 0;
-  const reasons: string[] = [];
-
-  // Check for framework-specific files
-  const rootFiles = fs.existsSync('.') ? fs.readdirSync('.') : [];
-  
-  // Jest indicators
-  if (rootFiles.includes('jest.config.js') || rootFiles.includes('jest.config.ts')) {
-    jestScore += 3;
-    reasons.push('Found Jest config file');
-  }
-  if (rootFiles.includes('package.json')) {
-    try {
-      const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-      if (packageJson.devDependencies?.jest || packageJson.dependencies?.jest) {
-        jestScore += 2;
-        reasons.push('Jest dependency in package.json');
-      }
-      if (packageJson.scripts?.test?.includes('jest')) {
-        jestScore += 1;
-        reasons.push('Jest in test script');
-      }
-    } catch (e) {
-      // Ignore JSON parse errors
-    }
-  }
-
-  // Pytest indicators
-  if (rootFiles.includes('pytest.ini') || rootFiles.includes('pyproject.toml') || rootFiles.includes('setup.cfg')) {
-    pytestScore += 3;
-    reasons.push('Found pytest config file');
-  }
-  if (rootFiles.includes('requirements.txt') || rootFiles.includes('requirements-dev.txt')) {
-    try {
-      const reqFiles = ['requirements.txt', 'requirements-dev.txt'];
-      for (const reqFile of reqFiles) {
-        if (fs.existsSync(reqFile)) {
-          const content = fs.readFileSync(reqFile, 'utf8');
-          if (content.includes('pytest')) {
-            pytestScore += 2;
-            reasons.push(`pytest in ${reqFile}`);
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore file read errors
-    }
-  }
-
-  // Check test file patterns in directories
-  for (const dir of searchDirs) {
-    if (!fs.existsSync(dir)) continue;
-
-    try {
-      const files = fs.readdirSync(dir, { recursive: true }) as string[];
-      
-      // TypeScript/Jest patterns
-      const jestFiles = files.filter(file => 
-        (file.endsWith('.test.ts') || file.endsWith('.spec.ts')) && 
-        typeof file === 'string'
-      );
-      
-      // Python/pytest patterns  
-      const pytestFiles = files.filter(file => 
-        typeof file === 'string' && file.endsWith('.py') && 
-        (file.startsWith('test_') || file.endsWith('_test.py'))
-      );
-
-      if (jestFiles.length > 0) {
-        jestScore += jestFiles.length * 0.5;
-        reasons.push(`Found ${jestFiles.length} TypeScript test files`);
-      }
-
-      if (pytestFiles.length > 0) {
-        pytestScore += pytestFiles.length * 0.5;
-        reasons.push(`Found ${pytestFiles.length} Python test files`);
-      }
-    } catch (e) {
-      // Ignore directory read errors
-    }
-  }
-
-  // Determine winner
-  const framework: TestFramework = jestScore > pytestScore ? 'jest' : 'pytest';
-  const confidence = Math.max(jestScore, pytestScore) / (jestScore + pytestScore + 1) * 100;
-
-  return { framework, confidence, reasons };
-}
-
-async function runJestGenerator(inputs: ActionInputs): Promise<{ totalFiles: number; totalTests: number }> {
+async function runGenerator(inputs: ActionInputs): Promise<{ totalFiles: number; totalTests: number }> {
   const generator = new MarkdownDocsGenerator({
     sourceDir: inputs.source || undefined,
     outputDir: inputs.output || undefined,
@@ -159,25 +44,9 @@ async function runJestGenerator(inputs: ActionInputs): Promise<{ totalFiles: num
   return { totalFiles: 0, totalTests: 0 }; // Placeholder - implement stats collection
 }
 
-async function runPytestGenerator(inputs: ActionInputs): Promise<{ totalFiles: number; totalTests: number }> {
-  const generator = new PytestMarkdownGenerator({
-    sourceDir: inputs.source || undefined,
-    outputDir: inputs.output || undefined,
-    githubUrl: inputs.githubUrl || undefined,
-    githubBranch: inputs.githubBranch,
-    repositoryRoot: inputs.repositoryRoot || undefined,
-    verbose: inputs.verbose
-  });
-
-  await generator.generate();
-  
-  // Extract stats (you'll need to modify the pytest generator to return these)
-  return { totalFiles: 0, totalTests: 0 }; // Placeholder - implement stats collection
-}
-
 async function main(): Promise<void> {
   try {
-    console.log('📚 Unified Test Documentation Generator');
+    console.log('📚 Test Documentation Generator');
     
     const inputs = getActionInputs();
     
@@ -186,52 +55,26 @@ async function main(): Promise<void> {
       console.log(`   ${key}: "${value}"`);
     });
 
-    let framework: TestFramework;
-    
-    if (inputs.testFramework === 'auto') {
-      const detection = detectTestFramework(inputs.source);
-      framework = detection.framework;
-      
-      console.log(`🔍 Auto-detected framework: ${framework} (confidence: ${detection.confidence.toFixed(1)}%)`);
-      if (inputs.verbose) {
-        console.log('   Detection reasons:');
-        detection.reasons.forEach(reason => console.log(`   - ${reason}`));
-      }
-    } else {
-      framework = inputs.testFramework;
-      console.log(`⚙️  Using specified framework: ${framework}`);
-    }
-
-    // Set default source directories based on framework
+    // Set default source directory
     if (!inputs.source) {
-      inputs.source = framework === 'jest' ? './src/test' : './tests';
+      inputs.source = './src/test';
       console.log(`📂 Using default source directory: ${inputs.source}`);
     }
 
-    // Set default output directories based on framework
+    // Set default output directory
     if (!inputs.output) {
-      inputs.output = framework === 'jest' ? './doc/tests' : './docs/tests';
+      inputs.output = './doc/tests';
       console.log(`📁 Using default output directory: ${inputs.output}`);
     }
 
-    // Add GitHub context if not provided
-    // Note: GitHub context would need @actions/github package
-    // For now, rely on manual github-url input
+    console.log('\n🚀 Running TypeScript/Jest/Vitest documentation generator...');
 
-    console.log(`\n🚀 Running ${framework} documentation generator...`);
-
-    let stats: { totalFiles: number; totalTests: number };
-    
-    if (framework === 'jest') {
-      stats = await runJestGenerator(inputs);
-    } else {
-      stats = await runPytestGenerator(inputs);
-    }
+    const stats = await runGenerator(inputs);
 
     // Set outputs
     core.setOutput('success', 'true');
     core.setOutput('output-dir', inputs.output);
-    core.setOutput('framework-detected', framework);
+    core.setOutput('framework-detected', 'typescript');
     core.setOutput('total-files', stats.totalFiles.toString());
     core.setOutput('total-tests', stats.totalTests.toString());
 

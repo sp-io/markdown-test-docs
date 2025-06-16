@@ -196,7 +196,6 @@ jobs:
         github-url: ${{ github.server_url }}/${{ github.repository }}
         github-branch: ${{ github.ref_name }}
         repository-root: '.'
-        test-framework: 'vitest'  # or 'jest', 'pytest', 'auto'
         verbose: 'true'
 ```
 
@@ -207,7 +206,6 @@ jobs:
 - `github-url`: GitHub repository URL for source links
 - `github-branch`: GitHub branch name (default: `main`)
 - `repository-root`: Repository root directory
-- `test-framework`: Test framework - `jest`, `vitest`, `pytest`, or `auto` (default: `auto`)
 - `verbose`: Enable verbose logging (default: `false`)
 
 ### Verbose Mode
