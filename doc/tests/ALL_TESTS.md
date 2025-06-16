@@ -2,20 +2,22 @@
 
 This file contains a comprehensive list of all test cases across the entire project.
 
-**Total Test Files:** 9
-**Total Test Cases:** 40
+**Total Test Files:** 10
+**Total Test Cases:** 45
 
 ## Test Type Summary
 
 | Type | Count | Percentage |
 |------|--------|------------|
-| ✅ Regular | 29 | 72.5% |
-| ⏭️ Skipped | 2 | 5.0% |
-| 📝 Todo | 1 | 2.5% |
-| 🔄 Each | 2 | 5.0% |
-| 🎯 Only | 2 | 5.0% |
-| ⚡ Concurrent | 2 | 5.0% |
-| 📊 Benchmark | 2 | 5.0% |
+| ✅ Regular | 30 | 66.7% |
+| ⏭️ Skipped | 2 | 4.4% |
+| 📝 Todo | 1 | 2.2% |
+| 🔄 Each | 2 | 4.4% |
+| 🎯 Only | 2 | 4.4% |
+| ⚡ Concurrent | 2 | 4.4% |
+| 📊 Benchmark | 2 | 4.4% |
+| 🏷️ Marked | 3 | 6.7% |
+| 🔢 Parametrize | 1 | 2.2% |
 
 ## ⚠️ Global Warnings
 
@@ -23,7 +25,7 @@ This file contains a comprehensive list of all test cases across the entire proj
 
 ## Test Distribution
 
-- **Test:** 38 tests
+- **Test:** 43 tests
 - **Test/X:** 1 tests
 - **Test/Y:** 1 tests
 
@@ -53,6 +55,11 @@ This file contains a comprehensive list of all test cases across the entire proj
 | Test | [example](test/example.md) | [L25](https://github.com/username/tsdoc-test-docs/blob/main/src/test/example.test.ts#L25) | MarkdownDocsGenerator > should initialize with custom directories | **Test custom directory configuration**<br>**Given:** a new MarkdownDocsGenerator instance<br>**When:** custom directories are provided<br>**Then:** it should use the custom directories |
 | Test | [example](test/example.md) | [L39](https://github.com/username/tsdoc-test-docs/blob/main/src/test/example.test.ts#L39) | MarkdownDocsGenerator > should handle errors when source directory does not exist | **Test error handling**<br>**Given:** an invalid source directory<br>**When:** the generator tries to find test files<br>**Then:** it should handle the error gracefully |
 | Test | [example](test/example.md) | [L65](https://github.com/username/tsdoc-test-docs/blob/main/src/test/example.test.ts#L65) | Documentation Generation [@advanced] > should parse complex test structures | **Advanced feature test**<br>**Given:** a test file with complex structure<br>**When:** the documentation is generated<br>**Then:** it should correctly parse all test cases<br>**And:** a MarkdownDocsGenerator configured to parse it |
+| Test | [example_pytest](test/test_example_pytest.py) | [L15](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L15) | TestSmoke::test_block_producing | **Steps:** - get latest partner chain block - wait for a predefined time - get latest partner chain block one more time - verify that block numbers increased |
+| Test | [example_pytest](test/test_example_pytest.py) | [L31](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L31) | TestSmoke::test_transaction | **Steps:** - create a transaction - sign transaction - submit transaction - check a balance of receiver was updated |
+| Test | [example_pytest](test/test_example_pytest.py) | [L59](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L59) | TestSmoke::test_lock_transaction | **Steps:** - create new transaction - lock transaction by calling lock() from ActiveFlow module - sign and submit transaction by calling extrinsic methods from substrate API |
+| Test | [example_pytest](test/test_example_pytest.py) | [L86](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L86) | test_multiplication | **Given:** an input value **When:** multiplying by 2 **Then:** result should match expected value |
+| Test | [example_pytest](test/test_example_pytest.py) | [L96](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L96) | test_simple_assertion | Simple test without any special markers |
 | Test | [github-link](test/github-link.md) | [L13](https://github.com/username/tsdoc-test-docs/blob/main/src/test/github-link.test.ts#L13) | GitHub Link Generation > should generate GitHub URLs when configured | **Test GitHub URL generation**<br>**Given:** a MarkdownDocsGenerator configured with GitHub parameters<br>**When:** documentation is generated<br>**Then:** links should point to GitHub repository |
 | Test | [github-link](test/github-link.md) | [L24](https://github.com/username/tsdoc-test-docs/blob/main/src/test/github-link.test.ts#L24) | GitHub Link Generation > should fallback to relative paths when no GitHub URL provided | **Test fallback behavior**<br>**Given:** a MarkdownDocsGenerator without GitHub configuration<br>**When:** documentation is generated<br>**Then:** links should use relative file paths |
 | Test | [github-link](test/github-link.md) | [L38](https://github.com/username/tsdoc-test-docs/blob/main/src/test/github-link.test.ts#L38) | GitHub Link Generation > should handle complex multi-step scenarios | **Test complex scenario with multiple conditions**<br>**Given:** a repository with multiple test files<br>**When:** documentation is generated with GitHub URL<br>**Then:** all links should point to correct GitHub locations<br>**And:** the repository has nested directory structure<br>**And:** the branch name is specified<br>**And:** paths should be calculated relative to repository root |
@@ -74,11 +81,24 @@ This file contains a comprehensive list of all test cases across the entire proj
 
 ## Tests by Tag
 
+### active_flow (1 tests)
+
+| File | Link | Test Name |
+|------|------|-----------|
+| [example_pytest](test/test_example_pytest.py) | [L59](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L59) | TestSmoke::test_lock_transaction |
+
 ### advanced (1 tests)
 
 | File | Link | Test Name |
 |------|------|-----------|
 | [example](test/example.md) | [L65](https://github.com/username/tsdoc-test-docs/blob/main/src/test/example.test.ts#L65) | Documentation Generation [@advanced] > should parse complex test structures |
+
+### ariadne (2 tests)
+
+| File | Link | Test Name |
+|------|------|-----------|
+| [example_pytest](test/test_example_pytest.py) | [L15](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L15) | TestSmoke::test_block_producing |
+| [example_pytest](test/test_example_pytest.py) | [L31](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L31) | TestSmoke::test_transaction |
 
 ### configuration (2 tests)
 
@@ -131,6 +151,12 @@ This file contains a comprehensive list of all test cases across the entire proj
 | [enhanced-demo](test/enhanced-demo.md) | [L40](https://github.com/username/tsdoc-test-docs/blob/main/src/test/enhanced-demo.test.ts#L40) | Enhanced Test Type Demo > should handle each test with input $input expecting $expected |
 | [vitest-example](test/vitest-example.md) | [L63](https://github.com/username/tsdoc-test-docs/blob/main/src/test/vitest-example.test.ts#L63) | Vitest Compatibility Tests > should handle each tests with input $input |
 
+### parametrize (1 tests)
+
+| File | Link | Test Name |
+|------|------|-----------|
+| [example_pytest](test/test_example_pytest.py) | [L86](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L86) | test_multiplication |
+
 ### performance (1 tests)
 
 | File | Link | Test Name |
@@ -144,11 +170,32 @@ This file contains a comprehensive list of all test cases across the entire proj
 | [and-tag-examples](test/and-tag-examples.md) | [L15](https://github.com/username/tsdoc-test-docs/blob/main/src/test/and-tag-examples.test.ts#L15) | User Authentication [@security] > should authenticate user with valid credentials |
 | [and-tag-examples](test/and-tag-examples.md) | [L32](https://github.com/username/tsdoc-test-docs/blob/main/src/test/and-tag-examples.test.ts#L32) | User Authentication [@security] > should handle multi-factor authentication flow |
 
+### skip_blockchain (1 tests)
+
+| File | Link | Test Name |
+|------|------|-----------|
+| [example_pytest](test/test_example_pytest.py) | [L59](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L59) | TestSmoke::test_lock_transaction |
+
 ### slow (1 tests)
 
 | File | Link | Test Name |
 |------|------|-----------|
 | [and-tag-examples](test/and-tag-examples.md) | [L52](https://github.com/username/tsdoc-test-docs/blob/main/src/test/and-tag-examples.test.ts#L52) | Data Processing Pipeline [@integration][@slow] > should process data through complete pipeline |
+
+### substrate (2 tests)
+
+| File | Link | Test Name |
+|------|------|-----------|
+| [example_pytest](test/test_example_pytest.py) | [L15](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L15) | TestSmoke::test_block_producing |
+| [example_pytest](test/test_example_pytest.py) | [L31](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L31) | TestSmoke::test_transaction |
+
+### test_key (3 tests)
+
+| File | Link | Test Name |
+|------|------|-----------|
+| [example_pytest](test/test_example_pytest.py) | [L15](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L15) | TestSmoke::test_block_producing |
+| [example_pytest](test/test_example_pytest.py) | [L31](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L31) | TestSmoke::test_transaction |
+| [example_pytest](test/test_example_pytest.py) | [L59](https://github.com/username/tsdoc-test-docs/blob/main/src/test/test_example_pytest.py#L59) | TestSmoke::test_lock_transaction |
 
 ### testing (3 tests)
 

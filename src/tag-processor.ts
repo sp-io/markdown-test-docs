@@ -51,7 +51,8 @@ export class TagProcessor {
       given: '',
       when: '',
       then: '',
-      and: []
+      and: [],
+      steps: []
     };
     
     let currentSection: keyof TestDescription = 'description';
@@ -149,8 +150,10 @@ export class TagProcessor {
       sections.description.push(text);
     } else if (currentSection === 'and') {
       sections.and.push(text);
+    } else if (currentSection === 'steps') {
+      sections.steps.push(text);
     } else {
-      sections[currentSection] = text;
+      (sections[currentSection] as string) = text;
     }
   }
 }

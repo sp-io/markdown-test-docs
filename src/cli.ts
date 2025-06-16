@@ -6,6 +6,7 @@
  */
 
 import MarkdownDocsGenerator from './markdown-docs';
+import { TestFramework } from './types';
 
 interface CommandLineOptions {
   source: string | undefined;
@@ -14,6 +15,7 @@ interface CommandLineOptions {
   githubBranch: string | undefined;
   repositoryRoot: string | undefined;
   verbose: boolean;
+  testFramework: TestFramework;
 }
 
 // Parse command-line arguments
@@ -25,7 +27,8 @@ function parseArgs(): CommandLineOptions {
     githubUrl: undefined,
     githubBranch: undefined,
     repositoryRoot: undefined,
-    verbose: false
+    verbose: false,
+    testFramework: 'auto'
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -43,6 +46,15 @@ function parseArgs(): CommandLineOptions {
       i++;
     } else if (args[i] === '--repository-root' && i + 1 < args.length) {
       options.repositoryRoot = args[i + 1];
+      i++;
+    } else if (args[i] === '--test-framework' && i + 1 < args.length) {
+      const framework = args[i + 1] as TestFramework;
+      if (['auto', 'jest', 'vitest', 'pytest'].includes(framework)) {
+        options.testFramework = framework;
+      } else {
+        console.error(`Invalid test framework: ${framework}. Must be one of: auto, jest, vitest, pytest`);
+        process.exit(1);
+      }
       i++;
     } else if (args[i] === '--verbose' || args[i] === '-v') {
       options.verbose = true;
@@ -68,6 +80,7 @@ Options:
   --github-url <url>       GitHub repository URL (e.g., 'https://github.com/username/repo')
   --github-branch <branch> GitHub branch name (default: 'main')
   --repository-root <path> Repository root directory (default: current working directory)
+  --test-framework <type>  Test framework - jest, vitest, pytest, or auto (default: 'auto')
   --verbose, -v            Enable verbose logging (shows unknown tags and additional info)
   --help, -h               Show this help message
 
@@ -92,6 +105,7 @@ async function main(): Promise<void> {
   console.log(`   GitHub URL: ${options.githubUrl || 'none'}`);
   console.log(`   GitHub Branch: ${options.githubBranch || 'main'}`);
   console.log(`   Repository Root: ${options.repositoryRoot || 'current directory'}`);
+  console.log(`   Test Framework: ${options.testFramework}`);
   console.log(`   Verbose: ${options.verbose}`);
   console.log('');
 
@@ -101,7 +115,8 @@ async function main(): Promise<void> {
     githubUrl: options.githubUrl,
     githubBranch: options.githubBranch,
     repositoryRoot: options.repositoryRoot,
-    verbose: options.verbose
+    verbose: options.verbose,
+    testFramework: options.testFramework
   });
 
   try {

@@ -27246,6 +27246,65 @@ function requireCore () {
 
 var coreExports = requireCore();
 
+class FrameworkDetector {
+    /**
+     * Detect test framework based on file extension and content
+     */
+    static detectFramework(filePath, content) {
+        const ext = path.extname(filePath);
+        const basename = path.basename(filePath);
+        // Python files
+        if (ext === '.py' && (basename.startsWith('test_') || basename.endsWith('_test.py'))) {
+            return 'pytest';
+        }
+        // TypeScript/JavaScript files
+        if ((ext === '.ts' || ext === '.js') && (basename.includes('.test.') || basename.includes('.spec.'))) {
+            if (content) {
+                // Check for Vitest imports/usage
+                if (content.includes('from \'vitest\'') || content.includes('import { bench }') || content.includes('bench(')) {
+                    return 'vitest';
+                }
+                // Default to Jest for TS/JS test files
+                return 'jest';
+            }
+            return 'jest'; // Default for TS/JS
+        }
+        return 'auto';
+    }
+    /**
+     * Check if file is a test file based on naming conventions
+     */
+    static isTestFile(filePath) {
+        const basename = path.basename(filePath);
+        const ext = path.extname(filePath);
+        // Python test files
+        if (ext === '.py') {
+            return basename.startsWith('test_') || basename.endsWith('_test.py');
+        }
+        // TypeScript/JavaScript test files
+        if (ext === '.ts' || ext === '.js') {
+            return basename.includes('.test.') || basename.includes('.spec.');
+        }
+        return false;
+    }
+    /**
+     * Get file extensions for a specific framework
+     */
+    static getFrameworkExtensions(framework) {
+        switch (framework) {
+            case 'pytest':
+                return ['.py'];
+            case 'jest':
+            case 'vitest':
+                return ['.ts', '.js'];
+            case 'auto':
+                return ['.py', '.ts', '.js'];
+            default:
+                return ['.ts', '.js'];
+        }
+    }
+}
+
 class FileUtils {
     constructor(verbose = false) {
         this.verbose = verbose;
@@ -27264,9 +27323,9 @@ class FileUtils {
     /**
      * Recursively find all test files in a directory
      */
-    findTestFiles(sourceDir) {
+    findTestFiles(sourceDir, framework = 'auto') {
         const testFiles = [];
-        console.log(`🔍 Looking for test files in: ${sourceDir}`);
+        console.log(`🔍 Looking for test files in: ${sourceDir} (framework: ${framework})`);
         // Check if directory exists
         if (!fs.existsSync(sourceDir)) {
             throw new Error(`Source directory does not exist: ${sourceDir}`);
@@ -27281,7 +27340,7 @@ class FileUtils {
                 if (entry.isDirectory()) {
                     findTestFilesRecursive(fullPath);
                 }
-                else if (entry.isFile() && (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts'))) {
+                else if (entry.isFile() && this.isTestFile(entry.name, framework)) {
                     testFiles.push(fullPath);
                     if (this.verbose) {
                         console.log(`   Found test file: ${fullPath}`);
@@ -27292,6 +27351,20 @@ class FileUtils {
         findTestFilesRecursive(sourceDir);
         console.log(`🔍 Found ${testFiles.length} test files`);
         return testFiles;
+    }
+    /**
+     * Check if a file is a test file based on framework
+     */
+    isTestFile(fileName, framework) {
+        if (framework === 'auto') {
+            return FrameworkDetector.isTestFile(fileName);
+        }
+        const ext = path.extname(fileName);
+        const validExtensions = FrameworkDetector.getFrameworkExtensions(framework);
+        if (!validExtensions.includes(ext)) {
+            return false;
+        }
+        return FrameworkDetector.isTestFile(fileName);
     }
     /**
      * Read file content as string
@@ -27319,6 +27392,12 @@ class FileUtils {
         }
         else if (fileName.endsWith('.spec.ts')) {
             fileName = fileName.replace('.spec.ts', '');
+        }
+        else if (fileName.startsWith('test_') && fileName.endsWith('.py')) {
+            fileName = fileName.replace('test_', '').replace('.py', '');
+        }
+        else if (fileName.endsWith('_test.py')) {
+            fileName = fileName.replace('_test.py', '');
         }
         return fileName;
     }
@@ -27418,7 +27497,8 @@ class TagProcessor {
             given: '',
             when: '',
             then: '',
-            and: []
+            and: [],
+            steps: []
         };
         let currentSection = 'description';
         let currentText = '';
@@ -27515,6 +27595,9 @@ class TagProcessor {
         else if (currentSection === 'and') {
             sections.and.push(text);
         }
+        else if (currentSection === 'steps') {
+            sections.steps.push(text);
+        }
         else {
             sections[currentSection] = text;
         }
@@ -27602,7 +27685,8 @@ class TestExtractor {
                             description,
                             lineNumber,
                             tags: this.tagProcessor.extractTags(currentDescribe.name, description).concat(['dynamic']),
-                            testType: 'each' // Dynamic tests are considered parametric
+                            testType: 'each', // Dynamic tests are considered parametric
+                            framework: 'jest'
                         });
                         if (this.verbose) {
                             console.log(`   Found dynamic test pattern: ${dynamicTestTemplate}`);
@@ -27648,7 +27732,8 @@ class TestExtractor {
                     description,
                     lineNumber,
                     tags: this.tagProcessor.extractTags(currentDescribe.name, description),
-                    testType: this.determineTestType(Array.isArray(testMatch) ? testMatch[0] : line)
+                    testType: this.determineTestType(Array.isArray(testMatch) ? testMatch[0] : line),
+                    framework: 'jest'
                 });
                 // Reset comment lines after processing
                 commentLines = [];
@@ -27688,7 +27773,8 @@ class TestExtractor {
                         description,
                         lineNumber: foundLineNumber,
                         tags,
-                        testType: this.determineTestType(testStartMatch[0])
+                        testType: this.determineTestType(testStartMatch[0]),
+                        framework: 'jest'
                     });
                     // Reset comment lines after processing
                     commentLines = [];
@@ -27718,7 +27804,8 @@ class TestExtractor {
                     description,
                     lineNumber,
                     tags: allTags,
-                    testType: this.determineTestType(line)
+                    testType: this.determineTestType(line),
+                    framework: 'jest'
                 });
                 // Reset comment lines after processing
                 commentLines = [];
@@ -27783,7 +27870,9 @@ class TestExtractor {
             each: 0,
             only: 0,
             concurrent: 0,
-            benchmark: 0
+            benchmark: 0,
+            marked: 0,
+            parametrize: 0
         };
         tests.forEach(test => {
             counts[test.testType]++;
@@ -27804,6 +27893,309 @@ class TestExtractor {
     }
 }
 
+class PytestExtractor {
+    constructor(linkGenerator, verbose = false) {
+        this.linkGenerator = linkGenerator;
+        this.verbose = verbose;
+        this.tagProcessor = new TagProcessor(verbose);
+    }
+    /**
+     * Extract tests from Python pytest file content
+     */
+    extractTests(content, filePath) {
+        const tests = [];
+        const lines = content.split('\n');
+        let currentClass = null;
+        let currentMarkers = [];
+        let inDocstring = false;
+        let docstringLines = [];
+        let docstringEndLineNumber = -1;
+        let docstringQuoteType = '';
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const trimmedLine = line.trim();
+            const lineNumber = i + 1;
+            // Track indentation for scope detection
+            const currentIndent = line.search(/\S/);
+            // Handle multi-line docstrings
+            if (!inDocstring && (trimmedLine.startsWith('"""') || trimmedLine.startsWith('\'\'\''))) {
+                inDocstring = true;
+                docstringLines = [];
+                docstringQuoteType = trimmedLine.startsWith('"""') ? '"""' : '\'\'\'';
+                // Check if docstring starts and ends on same line
+                const restOfLine = trimmedLine.substring(3);
+                if (restOfLine.includes(docstringQuoteType)) {
+                    // Single line docstring
+                    const docContent = restOfLine.substring(0, restOfLine.indexOf(docstringQuoteType));
+                    if (docContent.trim()) {
+                        docstringLines.push(docContent.trim());
+                    }
+                    inDocstring = false;
+                    docstringEndLineNumber = lineNumber;
+                }
+                continue;
+            }
+            if (inDocstring) {
+                if (trimmedLine.includes(docstringQuoteType)) {
+                    // End of docstring
+                    const beforeQuotes = trimmedLine.substring(0, trimmedLine.indexOf(docstringQuoteType));
+                    if (beforeQuotes.trim()) {
+                        docstringLines.push(beforeQuotes.trim());
+                    }
+                    inDocstring = false;
+                    docstringEndLineNumber = lineNumber;
+                }
+                else {
+                    // Continue docstring
+                    if (trimmedLine) {
+                        docstringLines.push(trimmedLine);
+                    }
+                }
+                continue;
+            }
+            // Extract pytest markers (@pytest.mark.* or @mark.*)
+            const markerMatch = trimmedLine.match(/^@(?:pytest\.)?mark\.(\w+)(?:\([^)]*\))?/);
+            if (markerMatch) {
+                currentMarkers.push(markerMatch[1]);
+                continue;
+            }
+            // Extract test key markers (like @mark.test_key('ETCM-6996'))
+            const testKeyMatch = trimmedLine.match(/^@(?:pytest\.)?mark\.test_key\(['"]([^'"]+)['"]\)/);
+            if (testKeyMatch) {
+                currentMarkers.push(`test_key:${testKeyMatch[1]}`);
+                continue;
+            }
+            // Extract test classes
+            const classMatch = trimmedLine.match(/^class\s+(Test\w+)\s*(?:\([^)]*\))?\s*:/);
+            if (classMatch) {
+                currentClass = classMatch[1];
+                // Reset markers when entering a new class
+                currentMarkers = [];
+                docstringLines = [];
+                docstringEndLineNumber = -1;
+                continue;
+            }
+            // Extract test functions
+            const testMatch = trimmedLine.match(/^def\s+(test_\w+)\s*\([^)]*\)\s*:/);
+            if (testMatch) {
+                const testName = testMatch[1];
+                const fullTestName = currentClass ? `${currentClass}::${testName}` : testName;
+                const describeName = currentClass || path.basename(filePath, '.py');
+                // Look ahead for docstring after the function definition
+                let functionDocstring = [];
+                for (let j = i + 1; j < Math.min(i + 20, lines.length); j++) {
+                    const nextLine = lines[j].trim();
+                    if (nextLine.startsWith('"""') || nextLine.startsWith('\'\'\'')) {
+                        const quoteType = nextLine.startsWith('"""') ? '"""' : '\'\'\'';
+                        functionDocstring = [];
+                        // Check if it's a single-line docstring
+                        if (nextLine.substring(3).includes(quoteType)) {
+                            const content = nextLine.substring(3, nextLine.lastIndexOf(quoteType));
+                            if (content.trim()) {
+                                functionDocstring.push(content.trim());
+                            }
+                            break;
+                        }
+                        else {
+                            // Multi-line docstring
+                            for (let k = j + 1; k < lines.length; k++) {
+                                const docLine = lines[k].trim();
+                                if (docLine.includes(quoteType)) {
+                                    const beforeQuotes = docLine.substring(0, docLine.indexOf(quoteType));
+                                    if (beforeQuotes.trim()) {
+                                        functionDocstring.push(beforeQuotes.trim());
+                                    }
+                                    break;
+                                }
+                                else if (docLine) {
+                                    functionDocstring.push(docLine);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    else if (nextLine && !nextLine.startsWith('#') && nextLine !== '') {
+                        // Hit non-comment, non-empty line - no docstring found
+                        break;
+                    }
+                }
+                // Parse docstring for description (prioritize function docstring over any previous docstring)
+                const description = functionDocstring.length > 0
+                    ? this.parseTestDescription(functionDocstring)
+                    : this.isDocstringRelevantToTest(docstringLines, docstringEndLineNumber, lineNumber)
+                        ? this.parseTestDescription(docstringLines)
+                        : '';
+                // Generate link to the test
+                const link = this.linkGenerator.generateTestLink(filePath, lineNumber, describeName, testName);
+                // Extract tags from markers and description
+                const tags = [...currentMarkers, ...this.tagProcessor.extractTags(describeName, description)];
+                tests.push({
+                    testName: fullTestName,
+                    shortName: testName,
+                    describeName,
+                    link,
+                    description,
+                    lineNumber,
+                    tags,
+                    testType: this.determineTestType(currentMarkers),
+                    framework: 'pytest'
+                });
+                if (this.verbose) {
+                    console.log(`   Found test: ${fullTestName} with markers: [${currentMarkers.join(', ')}]`);
+                }
+                // Reset markers and docstring after processing
+                currentMarkers = [];
+                docstringLines = [];
+                docstringEndLineNumber = -1;
+            }
+            // Reset class scope when leaving class (based on indentation)
+            if (currentClass && currentIndent === 0 && trimmedLine && !trimmedLine.startsWith('#')) {
+                currentClass = null;
+            }
+        }
+        return tests;
+    }
+    /**
+     * Generate a summary for the file including test type counts
+     */
+    generateFileSummary(tests) {
+        const total = tests.length;
+        const categories = {};
+        const tags = new Set();
+        const testTypes = this.countTestTypes(tests);
+        tests.forEach(test => {
+            // Categorize by describe name (class or file)
+            const category = test.describeName;
+            categories[category] = (categories[category] || 0) + 1;
+            // Collect tags
+            test.tags.forEach(tag => tags.add(tag));
+        });
+        return {
+            total,
+            categories,
+            tags: Array.from(tags),
+            testTypes,
+            framework: 'pytest'
+        };
+    }
+    /**
+     * Parse docstring content for test description and steps
+     */
+    parseTestDescription(docstringLines) {
+        if (docstringLines.length === 0) {
+            return '';
+        }
+        const parsed = {
+            description: [],
+            given: '',
+            when: '',
+            then: '',
+            and: [],
+            steps: []
+        };
+        let currentSection = 'description';
+        for (const line of docstringLines) {
+            const trimmed = line.trim();
+            if (!trimmed)
+                continue;
+            // Check for bullet points (steps)
+            if (trimmed.startsWith('* ')) {
+                parsed.steps.push(trimmed.substring(2).trim());
+                continue;
+            }
+            // Check for BDD-style tags
+            if (trimmed.toLowerCase().startsWith('@given')) {
+                currentSection = 'given';
+                parsed.given = trimmed.substring(6).trim();
+                continue;
+            }
+            if (trimmed.toLowerCase().startsWith('@when')) {
+                currentSection = 'when';
+                parsed.when = trimmed.substring(5).trim();
+                continue;
+            }
+            if (trimmed.toLowerCase().startsWith('@then')) {
+                currentSection = 'then';
+                parsed.then = trimmed.substring(5).trim();
+                continue;
+            }
+            if (trimmed.toLowerCase().startsWith('@and')) {
+                parsed.and.push(trimmed.substring(4).trim());
+                continue;
+            }
+            // Add to current section
+            if (currentSection === 'description') {
+                parsed.description.push(trimmed);
+            }
+        }
+        // Format the description
+        let result = parsed.description.join(' ').trim();
+        // Add BDD sections if present
+        if (parsed.given)
+            result += `\n\n**Given:** ${parsed.given}`;
+        if (parsed.when)
+            result += `\n**When:** ${parsed.when}`;
+        if (parsed.then)
+            result += `\n**Then:** ${parsed.then}`;
+        parsed.and.forEach(andClause => {
+            result += `\n**And:** ${andClause}`;
+        });
+        // Add steps if present
+        if (parsed.steps.length > 0) {
+            result += '\n\n**Steps:**\n';
+            parsed.steps.forEach(step => {
+                result += `- ${step}\n`;
+            });
+        }
+        return result.trim();
+    }
+    /**
+     * Determine test type from markers
+     */
+    determineTestType(markers) {
+        if (markers.includes('skip') || markers.includes('skipif'))
+            return 'skipped';
+        if (markers.includes('parametrize'))
+            return 'parametrize';
+        if (markers.some(m => m.startsWith('test_key:')))
+            return 'marked';
+        if (markers.length > 0)
+            return 'marked';
+        return 'regular';
+    }
+    /**
+     * Count test types in a test array
+     */
+    countTestTypes(tests) {
+        const counts = {
+            regular: 0,
+            skipped: 0,
+            todo: 0,
+            each: 0,
+            only: 0,
+            concurrent: 0,
+            benchmark: 0,
+            marked: 0,
+            parametrize: 0
+        };
+        tests.forEach(test => {
+            counts[test.testType]++;
+        });
+        return counts;
+    }
+    /**
+     * Check if the docstring is relevant to the current test
+     */
+    isDocstringRelevantToTest(docstringLines, docstringEndLineNumber, testLineNumber) {
+        if (docstringLines.length === 0 || docstringEndLineNumber === -1) {
+            return false;
+        }
+        // Docstring should be within 3 lines of the test (allowing for decorators)
+        const distance = testLineNumber - docstringEndLineNumber;
+        return distance >= 0 && distance <= 3;
+    }
+}
+
 class MarkdownGenerator {
     constructor(linkGenerator) {
         this.linkGenerator = linkGenerator;
@@ -27820,7 +28212,7 @@ class MarkdownGenerator {
         content += '## Test Type Summary\n\n';
         content += '| Type | Count | Percentage |\n';
         content += '|------|--------|------------|\n';
-        const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+        const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark', 'marked', 'parametrize'];
         for (const testType of testTypeOrder) {
             const count = summary.testTypes[testType];
             if (count > 0) {
@@ -27912,16 +28304,20 @@ class MarkdownGenerator {
             each: 0,
             only: 0,
             concurrent: 0,
-            benchmark: 0
+            benchmark: 0,
+            marked: 0,
+            parametrize: 0
         };
         allTests.forEach(test => {
-            globalTestTypes[test.testType]++;
+            if (test.testType in globalTestTypes) {
+                globalTestTypes[test.testType]++;
+            }
         });
         // Add global test type summary
         content += '## Test Type Summary\n\n';
         content += '| Type | Count | Percentage |\n';
         content += '|------|--------|------------|\n';
-        const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+        const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark', 'marked', 'parametrize'];
         for (const testType of testTypeOrder) {
             const count = globalTestTypes[testType];
             if (count > 0) {
@@ -28023,7 +28419,7 @@ class MarkdownGenerator {
             const tags = fileData.summary.tags.join(', ');
             // Generate test type summary for this file
             const testTypes = [];
-            const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+            const testTypeOrder = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark', 'marked', 'parametrize'];
             for (const testType of testTypeOrder) {
                 const count = fileData.summary.testTypes[testType];
                 if (count > 0) {
@@ -28070,6 +28466,8 @@ class MarkdownGenerator {
             case 'only': return '🎯';
             case 'concurrent': return '⚡';
             case 'benchmark': return '📊';
+            case 'marked': return '🏷️';
+            case 'parametrize': return '🔢';
             default: return '❓';
         }
     }
@@ -28111,13 +28509,16 @@ class MarkdownDocsGenerator {
             ? path.resolve(options.repositoryRoot)
             : process.cwd();
         this.verbose = options.verbose || false;
+        this.testFramework = options.testFramework || 'auto';
         this.documentation = new Map();
         // Initialize modules
         this.linkGenerator = new LinkGenerator(githubUrl, githubBranch, repositoryRoot);
         this.testExtractor = new TestExtractor(this.linkGenerator, this.verbose);
+        this.pytestExtractor = new PytestExtractor(this.linkGenerator, this.verbose);
         this.markdownGenerator = new MarkdownGenerator(this.linkGenerator);
         console.log(`Source directory: ${this.testDir}`);
         console.log(`Output directory: ${this.docsDir}`);
+        console.log(`Test framework: ${this.testFramework}`);
         console.log(`Repository root: ${repositoryRoot}`);
         if (githubUrl) {
             console.log(`GitHub URL: ${githubUrl}`);
@@ -28135,7 +28536,7 @@ class MarkdownDocsGenerator {
         // Ensure docs directory exists
         this.fileUtils.ensureDirectory(this.docsDir);
         // Find all test files
-        const testFiles = this.fileUtils.findTestFiles(this.testDir);
+        const testFiles = this.fileUtils.findTestFiles(this.testDir, this.testFramework);
         // Process each test file
         for (const testFile of testFiles) {
             console.log(`📄 Processing: ${testFile}`);
@@ -28156,11 +28557,20 @@ class MarkdownDocsGenerator {
         const content = this.fileUtils.readFileContent(filePath);
         const relativePath = path.relative(this.testDir, filePath);
         const fileName = this.fileUtils.getFileNameWithoutExtension(filePath);
-        const tests = this.testExtractor.extractTests(content, filePath);
+        // Detect framework for this specific file
+        const fileFramework = this.testFramework === 'auto'
+            ? FrameworkDetector.detectFramework(filePath, content)
+            : this.testFramework;
+        // Choose appropriate extractor
+        const tests = fileFramework === 'pytest'
+            ? this.pytestExtractor.extractTests(content, filePath)
+            : this.testExtractor.extractTests(content, filePath);
         if (this.verbose) {
-            console.log(`   Found ${tests.length} tests in ${fileName}`);
-            const summary = this.testExtractor.generateFileSummary(tests);
-            console.log(`   Test types: Regular: ${summary.testTypes.regular}, Skipped: ${summary.testTypes.skipped}, Todo: ${summary.testTypes.todo}, Each: ${summary.testTypes.each}, Only: ${summary.testTypes.only}, Concurrent: ${summary.testTypes.concurrent}, Benchmark: ${summary.testTypes.benchmark}`);
+            console.log(`   Found ${tests.length} tests in ${fileName} (${fileFramework})`);
+            const summary = fileFramework === 'pytest'
+                ? this.pytestExtractor.generateFileSummary(tests)
+                : this.testExtractor.generateFileSummary(tests);
+            console.log(`   Test types: Regular: ${summary.testTypes.regular}, Skipped: ${summary.testTypes.skipped}, Todo: ${summary.testTypes.todo}, Each: ${summary.testTypes.each}, Only: ${summary.testTypes.only}, Concurrent: ${summary.testTypes.concurrent}, Benchmark: ${summary.testTypes.benchmark}, Marked: ${summary.testTypes.marked}, Parametrize: ${summary.testTypes.parametrize}`);
         }
         if (tests.length > 0) {
             this.documentation.set(relativePath, {
@@ -28168,7 +28578,10 @@ class MarkdownDocsGenerator {
                 filePath: relativePath,
                 fullPath: filePath,
                 tests,
-                summary: this.testExtractor.generateFileSummary(tests)
+                summary: fileFramework === 'pytest'
+                    ? this.pytestExtractor.generateFileSummary(tests)
+                    : this.testExtractor.generateFileSummary(tests),
+                framework: fileFramework
             });
         }
         else if (this.verbose) {

@@ -1,8 +1,10 @@
 import path from 'path';
-import { GeneratorOptions, FileDocumentation } from './types';
+import { GeneratorOptions, FileDocumentation, TestFramework } from './types';
 import { FileUtils } from './file-utils';
 import { LinkGenerator } from './link-generator';
 import { TestExtractor } from './test-extractor';
+import { PytestExtractor } from './pytest-extractor';
+import { FrameworkDetector } from './framework-detector';
 import { MarkdownGenerator } from './markdown-generator';
 
 /**
@@ -13,9 +15,11 @@ class MarkdownDocsGenerator {
   private readonly testDir: string;
   private readonly docsDir: string;
   private readonly verbose: boolean;
+  private readonly testFramework: TestFramework;
   private readonly fileUtils: FileUtils;
   private readonly linkGenerator: LinkGenerator;
   private readonly testExtractor: TestExtractor;
+  private readonly pytestExtractor: PytestExtractor;
   private readonly markdownGenerator: MarkdownGenerator;
   private readonly documentation: Map<string, FileDocumentation>;
 
@@ -44,15 +48,18 @@ class MarkdownDocsGenerator {
       : process.cwd();
     
     this.verbose = options.verbose || false;
+    this.testFramework = options.testFramework || 'auto';
     this.documentation = new Map<string, FileDocumentation>();
 
     // Initialize modules
     this.linkGenerator = new LinkGenerator(githubUrl, githubBranch, repositoryRoot);
     this.testExtractor = new TestExtractor(this.linkGenerator, this.verbose);
+    this.pytestExtractor = new PytestExtractor(this.linkGenerator, this.verbose);
     this.markdownGenerator = new MarkdownGenerator(this.linkGenerator);
 
     console.log(`Source directory: ${this.testDir}`);
     console.log(`Output directory: ${this.docsDir}`);
+    console.log(`Test framework: ${this.testFramework}`);
     console.log(`Repository root: ${repositoryRoot}`);
     if (githubUrl) {
       console.log(`GitHub URL: ${githubUrl}`);
@@ -73,7 +80,7 @@ class MarkdownDocsGenerator {
     this.fileUtils.ensureDirectory(this.docsDir);
     
     // Find all test files
-    const testFiles = this.fileUtils.findTestFiles(this.testDir);
+    const testFiles = this.fileUtils.findTestFiles(this.testDir, this.testFramework);
     
     // Process each test file
     for (const testFile of testFiles) {
@@ -101,12 +108,22 @@ class MarkdownDocsGenerator {
     const relativePath = path.relative(this.testDir, filePath);
     const fileName = this.fileUtils.getFileNameWithoutExtension(filePath);
     
-    const tests = this.testExtractor.extractTests(content, filePath);
+    // Detect framework for this specific file
+    const fileFramework = this.testFramework === 'auto' 
+      ? FrameworkDetector.detectFramework(filePath, content)
+      : this.testFramework;
+    
+    // Choose appropriate extractor
+    const tests = fileFramework === 'pytest' 
+      ? this.pytestExtractor.extractTests(content, filePath)
+      : this.testExtractor.extractTests(content, filePath);
     
     if (this.verbose) {
-      console.log(`   Found ${tests.length} tests in ${fileName}`);
-      const summary = this.testExtractor.generateFileSummary(tests);
-      console.log(`   Test types: Regular: ${summary.testTypes.regular}, Skipped: ${summary.testTypes.skipped}, Todo: ${summary.testTypes.todo}, Each: ${summary.testTypes.each}, Only: ${summary.testTypes.only}, Concurrent: ${summary.testTypes.concurrent}, Benchmark: ${summary.testTypes.benchmark}`);
+      console.log(`   Found ${tests.length} tests in ${fileName} (${fileFramework})`);
+      const summary = fileFramework === 'pytest'
+        ? this.pytestExtractor.generateFileSummary(tests)
+        : this.testExtractor.generateFileSummary(tests);
+      console.log(`   Test types: Regular: ${summary.testTypes.regular}, Skipped: ${summary.testTypes.skipped}, Todo: ${summary.testTypes.todo}, Each: ${summary.testTypes.each}, Only: ${summary.testTypes.only}, Concurrent: ${summary.testTypes.concurrent}, Benchmark: ${summary.testTypes.benchmark}, Marked: ${summary.testTypes.marked}, Parametrize: ${summary.testTypes.parametrize}`);
     }
     
     if (tests.length > 0) {
@@ -115,7 +132,10 @@ class MarkdownDocsGenerator {
         filePath: relativePath,
         fullPath: filePath,
         tests,
-        summary: this.testExtractor.generateFileSummary(tests)
+        summary: fileFramework === 'pytest'
+          ? this.pytestExtractor.generateFileSummary(tests)
+          : this.testExtractor.generateFileSummary(tests),
+        framework: fileFramework
       });
     } else if (this.verbose) {
       console.log(`   ⚠️  No tests extracted from ${fileName} - check test structure`);

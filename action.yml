@@ -1,5 +1,5 @@
 name: 'markdown-test-docs-action'
-description: 'Generate markdown documentation from TypeScript/Jest/Vitest test files'
+description: 'Generate markdown documentation from Jest/Vitest/Pytest test files'
 author: 'Szymon Paluchowski'
 
 inputs:
@@ -23,6 +23,10 @@ inputs:
     description: 'Repository root directory'
     required: false
     default: ''
+  test-framework:
+    description: 'Test framework - jest, vitest, pytest, or auto'
+    required: false
+    default: 'auto'
   verbose:
     description: 'Enable verbose logging'
     required: false

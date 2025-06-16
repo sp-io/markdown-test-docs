@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { TestFramework } from './types';
+import { FrameworkDetector } from './framework-detector';
 
 export class FileUtils {
   constructor(private verbose: boolean = false) {}
@@ -19,10 +21,10 @@ export class FileUtils {
   /**
    * Recursively find all test files in a directory
    */
-  findTestFiles(sourceDir: string): string[] {
+  findTestFiles(sourceDir: string, framework: TestFramework = 'auto'): string[] {
     const testFiles: string[] = [];
     
-    console.log(`🔍 Looking for test files in: ${sourceDir}`);
+    console.log(`🔍 Looking for test files in: ${sourceDir} (framework: ${framework})`);
     
     // Check if directory exists
     if (!fs.existsSync(sourceDir)) {
@@ -41,7 +43,7 @@ export class FileUtils {
         
         if (entry.isDirectory()) {
           findTestFilesRecursive(fullPath);
-        } else if (entry.isFile() && (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts'))) {
+        } else if (entry.isFile() && this.isTestFile(entry.name, framework)) {
           testFiles.push(fullPath);
           if (this.verbose) {
             console.log(`   Found test file: ${fullPath}`);
@@ -54,6 +56,24 @@ export class FileUtils {
     console.log(`🔍 Found ${testFiles.length} test files`);
     
     return testFiles;
+  }
+
+  /**
+   * Check if a file is a test file based on framework
+   */
+  private isTestFile(fileName: string, framework: TestFramework): boolean {
+    if (framework === 'auto') {
+      return FrameworkDetector.isTestFile(fileName);
+    }
+    
+    const ext = path.extname(fileName);
+    const validExtensions = FrameworkDetector.getFrameworkExtensions(framework);
+    
+    if (!validExtensions.includes(ext)) {
+      return false;
+    }
+    
+    return FrameworkDetector.isTestFile(fileName);
   }
 
   /**
@@ -84,6 +104,10 @@ export class FileUtils {
       fileName = fileName.replace('.test.ts', '');
     } else if (fileName.endsWith('.spec.ts')) {
       fileName = fileName.replace('.spec.ts', '');
+    } else if (fileName.startsWith('test_') && fileName.endsWith('.py')) {
+      fileName = fileName.replace('test_', '').replace('.py', '');
+    } else if (fileName.endsWith('_test.py')) {
+      fileName = fileName.replace('_test.py', '');
     }
     return fileName;
   }

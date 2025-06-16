@@ -20,7 +20,7 @@ export class MarkdownGenerator {
     content += '| Type | Count | Percentage |\n';
     content += '|------|--------|------------|\n';
     
-    const testTypeOrder: TestType[] = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+    const testTypeOrder: TestType[] = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark', 'marked', 'parametrize'];
     
     for (const testType of testTypeOrder) {
       const count = summary.testTypes[testType];
@@ -125,11 +125,15 @@ export class MarkdownGenerator {
       each: 0,
       only: 0,
       concurrent: 0,
-      benchmark: 0
+      benchmark: 0,
+      marked: 0,
+      parametrize: 0
     };
 
     allTests.forEach(test => {
-      globalTestTypes[test.testType]++;
+      if (test.testType in globalTestTypes) {
+        globalTestTypes[test.testType as keyof typeof globalTestTypes]++;
+      }
     });
 
     // Add global test type summary
@@ -137,10 +141,10 @@ export class MarkdownGenerator {
     content += '| Type | Count | Percentage |\n';
     content += '|------|--------|------------|\n';
     
-    const testTypeOrder: TestType[] = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+    const testTypeOrder: TestType[] = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark', 'marked', 'parametrize'];
     
     for (const testType of testTypeOrder) {
-      const count = globalTestTypes[testType];
+      const count = globalTestTypes[testType as keyof typeof globalTestTypes];
       if (count > 0) {
         const percentage = ((count / allTests.length) * 100).toFixed(1);
         const emoji = this.getTestTypeEmoji(testType);
@@ -260,7 +264,7 @@ export class MarkdownGenerator {
       
       // Generate test type summary for this file
       const testTypes: string[] = [];
-      const testTypeOrder: TestType[] = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark'];
+      const testTypeOrder: TestType[] = ['regular', 'skipped', 'todo', 'each', 'only', 'concurrent', 'benchmark', 'marked', 'parametrize'];
       
       for (const testType of testTypeOrder) {
         const count = fileData.summary.testTypes[testType];
@@ -316,6 +320,8 @@ export class MarkdownGenerator {
     case 'only': return '🎯';
     case 'concurrent': return '⚡';
     case 'benchmark': return '📊';
+    case 'marked': return '🏷️';
+    case 'parametrize': return '🔢';
     default: return '❓';
     }
   }

@@ -95,7 +95,8 @@ export class TestExtractor {
               description,
               lineNumber,
               tags: this.tagProcessor.extractTags(currentDescribe.name, description).concat(['dynamic']),
-              testType: 'each' // Dynamic tests are considered parametric
+              testType: 'each', // Dynamic tests are considered parametric
+              framework: 'jest'
             });
             
             if (this.verbose) {
@@ -150,7 +151,8 @@ export class TestExtractor {
           description,
           lineNumber,
           tags: this.tagProcessor.extractTags(currentDescribe.name, description),
-          testType: this.determineTestType(Array.isArray(testMatch) ? testMatch[0] : line)
+          testType: this.determineTestType(Array.isArray(testMatch) ? testMatch[0] : line),
+          framework: 'jest'
         });
 
         // Reset comment lines after processing
@@ -197,7 +199,8 @@ export class TestExtractor {
             description,
             lineNumber: foundLineNumber,
             tags,
-            testType: this.determineTestType(testStartMatch[0])
+            testType: this.determineTestType(testStartMatch[0]),
+            framework: 'jest'
           });
 
           // Reset comment lines after processing
@@ -234,7 +237,8 @@ export class TestExtractor {
           description,
           lineNumber,
           tags: allTags,
-          testType: this.determineTestType(line)
+          testType: this.determineTestType(line),
+          framework: 'jest'
         });
 
         // Reset comment lines after processing
@@ -302,7 +306,9 @@ export class TestExtractor {
       each: 0,
       only: 0,
       concurrent: 0,
-      benchmark: 0
+      benchmark: 0,
+      marked: 0,
+      parametrize: 0
     };
 
     tests.forEach(test => {

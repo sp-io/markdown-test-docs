@@ -1,3 +1,4 @@
+import { TestFramework } from './types';
 export declare class FileUtils {
     private verbose;
     constructor(verbose?: boolean);
@@ -8,7 +9,11 @@ export declare class FileUtils {
     /**
      * Recursively find all test files in a directory
      */
-    findTestFiles(sourceDir: string): string[];
+    findTestFiles(sourceDir: string, framework?: TestFramework): string[];
+    /**
+     * Check if a file is a test file based on framework
+     */
+    private isTestFile;
     /**
      * Read file content as string
      */

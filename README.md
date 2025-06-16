@@ -1,36 +1,100 @@
 # Markdown Test Documentation Generator
 
-Automatically generate markdown documentation from Jest and Vitest test files, creating a comprehensive test documentation system with GitHub integration.
+Automatically generate markdown documentation from Jest, Vitest, and Pytest test files, creating a comprehensive test documentation system with GitHub integration.
 
 ## Features
 
-- Extracts test descriptions and metadata from Jest and Vitest test files
+- Extracts test descriptions and metadata from Jest, Vitest, and Pytest test files
 - Supports all Jest/Vitest test functions: `it`, `test`, `describe`, `bench`
-- Handles test modifiers: `.skip`, `.only`, `.todo`, `.concurrent`, `.each()`
+- Supports all Pytest test functions: `def test_*()`, `class Test*`, parametrized tests
+- Handles test modifiers: `.skip`, `.only`, `.todo`, `.concurrent`, `.each()`, `@pytest.mark.*`
 - Generates individual markdown files for each test file
 - Creates a comprehensive index of all tests
-- Supports JSDoc-style annotations in test comments
+- Supports JSDoc-style annotations in test comments and Python docstrings
 - Categorizes tests and extracts tags
 - Formats using Given/When/Then style for behavior-driven tests
 - **NEW**: GitHub repository integration with direct links to source code
+- **NEW**: Multi-framework support with automatic framework detection
 
-## Vitest Support
+## Supported Test Frameworks
 
-Full compatibility with Vitest testing framework, including:
+### Jest/Vitest Support
+Full compatibility with Jest and Vitest testing frameworks, including:
 
-### Supported Test Functions
+#### Supported Test Functions
 - `it()` and `test()` - Standard test cases
 - `describe()` - Test suites and grouping
 - `bench()` - Benchmark/performance tests (Vitest-specific)
 
-### Supported Modifiers
+#### Supported Modifiers
 - `.skip` - Skip tests during execution
 - `.only` - Run only specific tests  
 - `.todo` - Mark tests as todo/pending
 - `.concurrent` - Run tests in parallel
 - `.each([...])` - Parameterized tests with data sets
 
-### Example Vitest Test File
+### Pytest Support
+Full compatibility with Pytest testing framework, including:
+
+#### Supported Test Patterns
+- `def test_*()` - Function-based test cases
+- `class Test*:` - Class-based test suites
+- `@pytest.mark.*` and `@mark.*` - Test markers and decorators
+- `@pytest.mark.parametrize` - Parameterized tests
+- `@pytest.mark.skip` - Skipped tests
+
+#### Docstring Parsing
+- Triple-quoted docstrings (""" or ''')
+- Bullet point steps extraction (e.g., `* step description`)
+- BDD-style annotations (@given/@when/@then/@and)
+- Automatic description and step extraction
+
+### Example Pytest Test File
+```python
+import pytest
+from pytest import mark
+
+@mark.smoke
+@mark.test_key('ETCM-6992')
+def test_user_login(api, user_credentials):
+    """Test user login functionality
+    
+    * navigate to login page
+    * enter valid credentials
+    * click login button
+    * verify user is redirected to dashboard
+    """
+    api.navigate_to_login()
+    api.enter_credentials(user_credentials)
+    api.click_login()
+    assert api.current_page() == "dashboard"
+
+@pytest.mark.parametrize("input_value,expected", [
+    (1, 2), (2, 4), (3, 6)
+])
+def test_multiplication(input_value, expected):
+    """Test multiplication function with multiple inputs
+    
+    @given an input value
+    @when multiplying by 2
+    @then result should match expected value
+    """
+    assert input_value * 2 == expected
+
+class TestUserManagement:
+    @mark.integration
+    def test_create_user(self, api):
+        """Test user creation process
+        
+        * prepare user data
+        * send creation request
+        * verify user exists in database
+        """
+        user_data = {"name": "John", "email": "john@test.com"}
+        response = api.create_user(user_data)
+        assert response.status_code == 201
+        assert api.user_exists(user_data["email"])
+```
 ```typescript
 import { describe, it, test, bench, expect } from 'vitest';
 
@@ -125,6 +189,11 @@ Basic usage:
 markdown-docs --source ./src/test --output ./docs/tests
 ```
 
+With specific test framework:
+```bash
+markdown-docs --source ./tests --output ./docs/tests --test-framework pytest
+```
+
 With GitHub integration:
 ```bash
 markdown-docs --source ./src/test --output ./docs/tests \
@@ -137,6 +206,7 @@ markdown-docs --source ./src/test --output ./docs/tests \
 
 - `--source <path>`: Specify the source directory containing test files (default: `./src/test`)
 - `--output <path>`: Specify the output directory for documentation (default: `./doc/tests`)
+- `--test-framework <framework>`: Specify test framework - `jest`, `vitest`, `pytest`, or `auto` (default: `auto`)
 - `--github-url <url>`: GitHub repository URL (e.g., 'https://github.com/username/repo')
 - `--github-branch <branch>`: GitHub branch name (default: 'main')
 - `--repository-root <path>`: Repository root directory (default: current working directory)
@@ -160,6 +230,7 @@ import { MarkdownDocsGenerator } from 'markdown-docs-generator';
 const generator = new MarkdownDocsGenerator({
   sourceDir: './src/test',
   outputDir: './docs/tests',
+  testFramework: 'pytest', // or 'jest', 'vitest', 'auto'
   githubUrl: 'https://github.com/username/repo',
   githubBranch: 'main',
   repositoryRoot: './',

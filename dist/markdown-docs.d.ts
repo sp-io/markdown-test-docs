@@ -7,9 +7,11 @@ declare class MarkdownDocsGenerator {
     private readonly testDir;
     private readonly docsDir;
     private readonly verbose;
+    private readonly testFramework;
     private readonly fileUtils;
     private readonly linkGenerator;
     private readonly testExtractor;
+    private readonly pytestExtractor;
     private readonly markdownGenerator;
     private readonly documentation;
     /**

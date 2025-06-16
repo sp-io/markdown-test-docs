@@ -1,3 +1,4 @@
+export type TestFramework = 'jest' | 'vitest' | 'pytest' | 'auto';
 export interface GeneratorOptions {
     sourceDir?: string;
     outputDir?: string;
@@ -5,13 +6,14 @@ export interface GeneratorOptions {
     githubBranch?: string;
     repositoryRoot?: string;
     verbose?: boolean;
+    testFramework?: TestFramework;
 }
 export interface DescribeBlock {
     name: string;
     lineNumber: number;
     level: number;
 }
-export type TestType = 'regular' | 'skipped' | 'todo' | 'each' | 'only' | 'concurrent' | 'benchmark';
+export type TestType = 'regular' | 'skipped' | 'todo' | 'each' | 'only' | 'concurrent' | 'benchmark' | 'marked' | 'parametrize';
 export interface TestCase {
     testName: string;
     shortName: string;
@@ -21,6 +23,7 @@ export interface TestCase {
     lineNumber: number;
     tags: string[];
     testType: TestType;
+    framework?: TestFramework;
 }
 export interface TestCaseWithFile extends TestCase {
     fileName: string;
@@ -33,6 +36,7 @@ export interface TestDescription {
     when: string;
     then: string;
     and: string[];
+    steps: string[];
 }
 export interface TestTypeCounts {
     regular: number;
@@ -42,12 +46,15 @@ export interface TestTypeCounts {
     only: number;
     concurrent: number;
     benchmark: number;
+    marked: number;
+    parametrize: number;
 }
 export interface FileSummary {
     total: number;
     categories: Record<string, number>;
     tags: string[];
     testTypes: TestTypeCounts;
+    framework?: TestFramework;
 }
 export interface FileDocumentation {
     fileName: string;
@@ -55,4 +62,5 @@ export interface FileDocumentation {
     fullPath: string;
     tests: TestCase[];
     summary: FileSummary;
+    framework?: TestFramework;
 }
